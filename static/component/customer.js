@@ -39,8 +39,21 @@ export default {
                             <h6 class="card-subtitle mb-2 text-muted">Price: {{ service.base_price }}</h6>
                             <p>Time Required: {{ service.time_required }} mins</p>
                             <p>{{ service.description }}</p>
-                            <button v-if="service.professionals.length" class="btn btn-primary btn-sm" @click="bookService(service.id)">Book Service</button>
-                            <p v-else class="text-muted">No professionals available.</p>
+                            <div v-if="service.professionals.length">
+                            <select v-model="selectedProfessionals[service.id]" class="form-select">
+                                <option value="" disabled selected>Choose a professional</option>
+                                <option v-for="pro in service.professionals" :key="pro.id" :value="pro.id">
+                                    {{ pro.name }} ({{ pro.experience }} years experience)
+                                </option>
+                            </select>
+            
+                            <button class="btn btn-primary btn-sm mt-2" 
+                                    @click="bookService(service.id, selectedProfessionals[service.id])"
+                                    :disabled="!selectedProfessionals[service.id]">
+                                Book Service
+                            </button>
+                        </div>
+            
                         </div>
                     </div>
                 </div>
@@ -80,6 +93,8 @@ export default {
                             <td>
                             
                             <button class="btn btn-warning btn-sm" @click="openReviewModal(history)">Close</button>
+                            <button class="btn btn-danger btn-sm" @click="deleteServiceRequest(history.id)">Delete</button>
+
                             <!-- Review & Rating Modal -->
                     <div v-if="showReviewModal" class="modal fade show d-block" tabindex="-1">
                     <div class="modal-dialog">
@@ -133,7 +148,9 @@ export default {
     data() {
         return {
             userData: {},
+            selectedProfessionals: {} ,
             services: [],
+            // customerId: localStorage.getItem("customer_id"), // Ensure this is set
             serviceHistory: [],
             searchQuery: "",
             showEditForm: false,
@@ -205,25 +222,45 @@ export default {
                 console.error("Error fetching user data:", err);
             }
         },
-    
-        async fetchServiceHistory(customer_id) {
+        async fetchServiceHistory() {
             try {
+                const customer_id = this.userData?.customer_id;  // ✅ Use userData to get customer_id
+                
                 if (!customer_id) {
-                    console.error("❌ Error: Missing customer_id in fetchServiceHistory()");
+                    console.error("❌ Error: customer_id is undefined in fetchServiceHistory()");
                     return;
                 }
-    
+        
                 console.log(`🔍 Fetching service history for customer_id: ${customer_id}`);
-    
+        
                 const res = await fetch(`/api/customer/${customer_id}/service_history`, {
                     headers: { "Authentication-Token": localStorage.getItem("auth_token") }
                 });
-    
+        
                 this.serviceHistory = await res.json();
             } catch (err) {
                 console.error("Error fetching service history:", err);
             }
-        },
+        }
+,        
+        // async fetchServiceHistory(customer_id) {
+        //     try {
+        //         if (!customer_id) {
+        //             console.error("❌ Error: Missing customer_id in fetchServiceHistory()");
+        //             return;
+        //         }
+    
+        //         console.log(`🔍 Fetching service history for customer_id: ${customer_id}`);
+    
+        //         const res = await fetch(`/api/customer/${customer_id}/service_history`, {
+        //             headers: { "Authentication-Token": localStorage.getItem("auth_token") }
+        //         });
+    
+        //         this.serviceHistory = await res.json();
+        //     } catch (err) {
+        //         console.error("Error fetching service history:", err);
+        //     }
+        // },
     
         async fetchCustomerServices() {
             try {
@@ -236,27 +273,87 @@ export default {
             }
         },
     
-        bookService(serviceId) {
-            fetch('/api/customer/book_service', {
-                method: 'POST',
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authentication-Token": localStorage.getItem("auth_token")
-                },
-                body: JSON.stringify({ service_id: serviceId })
-            })
-            .then(response => response.json())
-            .then(data => {
+        // bookService(serviceId) {
+        //     fetch('/api/customer/book_service', {
+        //         method: 'POST',
+        //         headers: {
+        //             "Content-Type": "application/json",
+        //             "Authentication-Token": localStorage.getItem("auth_token")
+        //         },
+        //         body: JSON.stringify({ service_id: serviceId })
+        //     })
+        //     .then(response => response.json())
+        //     .then(data => {
+        //         if (data.success) {
+        //             alert("✅ Service booked successfully!");
+        //             this.fetchServiceHistory(this.userData.customer_id);  // ✅ Pass correct customer_id
+        //         } else {
+        //             alert("❌ Failed to book service: " + data.message);
+        //         }
+        //     })
+        //     .catch(error => console.error("Error booking service:", error));
+        // },
+        // async bookService(serviceId, professionalId) {
+        //     if (!professionalId) {
+        //         alert("❌ Please select a professional before booking.");
+        //         return;
+        //     }
+    
+        //     try {
+        //         const response = await fetch('/api/customer/book_service', {
+        //             method: 'POST',
+        //             headers: {
+        //                 "Content-Type": "application/json",
+        //                 "Authentication-Token": localStorage.getItem("auth_token")
+        //             },
+        //             body: JSON.stringify({ service_id: serviceId, professional_id: professionalId })
+        //         });
+    
+        //         const data = await response.json();
+    
+        //         if (data.success) {
+        //             alert("✅ Service booked successfully!");
+        //             this.fetchServiceHistory();  // ✅ Refresh service history
+        //         } else {
+        //             alert("❌ Failed to book service: " + data.message);
+        //         }
+        //     } catch (error) {
+        //         console.error("Error booking service:", error);
+        //     }},
+        async bookService(serviceId) {
+            try {
+                const selectedProfessional = this.selectedProfessionals[serviceId];  // ✅ Get selected pro ID
+                
+                if (!selectedProfessional) {
+                    alert("❌ Please select a professional before booking.");
+                    return;
+                }
+        
+                const response = await fetch('/api/customer/book_service', {
+                    method: 'POST',
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authentication-Token": localStorage.getItem("auth_token")
+                    },
+                    body: JSON.stringify({ 
+                        service_id: serviceId, 
+                        pro_id: selectedProfessional  // ✅ Send selected pro ID 
+                    })
+                });
+        
+                const data = await response.json();
+        
                 if (data.success) {
                     alert("✅ Service booked successfully!");
-                    this.fetchServiceHistory(this.userData.customer_id);  // ✅ Pass correct customer_id
+                    this.fetchServiceHistory(); // ✅ Fetch updated history
                 } else {
                     alert("❌ Failed to book service: " + data.message);
                 }
-            })
-            .catch(error => console.error("Error booking service:", error));
-        },
-    
+            } catch (error) {
+                console.error("Error booking service:", error);
+            }
+        }
+,        
         openReviewModal(history) {
             console.log("🔹 Close button clicked for service ID:", history.id);
             this.selectedHistory = history;
@@ -265,36 +362,152 @@ export default {
             this.showReviewModal = true;  // Open modal
         },
     
-        submitReview() {
-            if (!this.userRating || !this.userRemark) {
-                alert("⚠️ Please provide both a rating and a remark!");
-                return;
-            }
+        // submitReview() {
+        //     if (!this.userRating || !this.userRemark) {
+        //         alert("⚠️ Please provide both a rating and a remark!");
+        //         return;
+        //     }
     
-            fetch(`/api/customer/service_history/${this.selectedHistory.id}/review`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authentication-Token": localStorage.getItem("auth_token")
-                },
-                body: JSON.stringify({
-                    rating: this.userRating,
-                    remark: this.userRemark
-                })
+        //     fetch(`/api/customer/service_history/${this.selectedHistory.id}/review`, {
+        //         method: "POST",
+        //         headers: {
+        //             "Content-Type": "application/json",
+        //             "Authentication-Token": localStorage.getItem("auth_token")
+        //         },
+        //         body: JSON.stringify({
+        //             rating: this.userRating,
+        //             remark: this.userRemark
+        //         })
+        //     })
+        //     .then(response => response.json())
+        //     .then(data => {
+        //         if (data.message === "Review submitted successfully") {
+        //             console.log("✅ Review submitted!");
+        //             this.showReviewModal = false;  // Close modal
+        //             this.fetchServiceHistory(this.userData.customer_id);    // ✅ Fetch updated history
+        //         } else {
+        //             console.error("Error: ", data.message);
+        //         }
+        //     })
+        //     .catch(error => console.error("Error submitting review:", error));
+        // },
+//         submitReview() {
+//             if (!this.userRating || !this.userRemark) {
+//                 alert("⚠️ Please provide both a rating and a remark!");
+//                 return;
+//             }
+        
+//             fetch(`/api/customer/service_history/${this.selectedHistory.id}/review`, {
+//                 method: "POST",
+//                 headers: {
+//                     "Content-Type": "application/json",
+//                     "Authentication-Token": localStorage.getItem("auth_token")
+//                 },
+//                 body: JSON.stringify({
+//                     rating: this.userRating,
+//                     remark: this.userRemark
+//                 })
+//             })
+//             .then(response => response.json())
+//             .then(data => {
+//                 if (data.message === "Review submitted successfully") {
+//                     console.log("✅ Review submitted!");
+        
+//                     // ✅ Directly update the selected entry in `serviceHistory`
+//                     const index = this.serviceHistory.findIndex(h => h.id === this.selectedHistory.id);
+//                     if (index !== -1) {
+//                         this.serviceHistory[index].rating = this.userRating;
+//                         this.serviceHistory[index].remark = this.userRemark;
+//                     }
+        
+//                     this.showReviewModal = false;  // Close modal
+//                 } else {
+//                     console.error("Error: ", data.message);
+//                 }
+//             })
+//             .catch(error => console.error("Error submitting review:", error));
+//         }
+// ,        
+// submitReview() {
+//     if (!this.userRating || !this.userRemark) {
+//         alert("⚠️ Please provide both a rating and a remark!");
+//         return;
+//     }
+
+//     fetch(`/api/customer/service_history/${this.selectedHistory.id}/review`, {
+//         method: "POST",
+//         headers: {
+//             "Content-Type": "application/json",
+//             "Authentication-Token": localStorage.getItem("auth_token")
+//         },
+//         body: JSON.stringify({
+//             rating: this.userRating,
+//             remark: this.userRemark
+//         })
+//     })
+//     .then(response => response.json())
+//     .then(data => {
+//         console.log("🔍 Server Response:", data);  // ✅ Debug response
+
+//         if (data.message === "Review submitted successfully") {
+//             console.log("✅ Review submitted!");
+
+//             // ✅ Find index of the updated service
+//             const index = this.serviceHistory.findIndex(h => h.id === this.selectedHistory.id);
+//             if (index !== -1) {
+//                 // ✅ Update values (force Vue to detect changes)
+//                 this.$set(this.serviceHistory, index, { 
+//                     ...this.serviceHistory[index], 
+//                     rating: this.userRating, 
+//                     remark: this.userRemark, 
+//                     status: "closed"
+//                 });
+
+//                 console.log("🔄 Updated serviceHistory:", this.serviceHistory);
+//             }
+
+//             this.showReviewModal = false;  // Close modal
+//         } else {
+//             console.error("❌ Error:", data.message);
+//         }
+//     })
+//     .catch(error => console.error("❌ Error submitting review:", error));}
+async submitReview() {
+    if (!this.userRating || !this.userRemark) {
+        alert("⚠️ Please provide both a rating and a remark!");
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/customer/service_history/${this.selectedHistory.id}/review`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authentication-Token": localStorage.getItem("auth_token")
+            },
+            body: JSON.stringify({
+                rating: this.userRating,
+                remark: this.userRemark
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.message === "Review submitted successfully") {
-                    console.log("✅ Review submitted!");
-                    this.showReviewModal = false;  // Close modal
-                    this.fetchServiceHistory(this.userData.customer_id);    // ✅ Fetch updated history
-                } else {
-                    console.error("Error: ", data.message);
-                }
-            })
-            .catch(error => console.error("Error submitting review:", error));
-        },
-    
+        });
+
+        const data = await res.json();
+        console.log("🔍 Server Response:", data);
+
+        if (res.ok) {
+            console.log("✅ Review submitted successfully!");
+            this.showReviewModal = false;
+            this.fetchServiceHistory(this.userData.customer_id);  // ✅ Refresh without reload
+        } else {
+            console.warn("⚠️ Unexpected response:", data.message || "Unknown error");
+        }
+
+    } catch (error) {
+        console.error("❌ Error submitting review:", error);
+    }
+}
+
+,
         editService(service) {
             console.log("✏️ Editing service:", service); // Debugging Log
     
@@ -364,7 +577,58 @@ export default {
             //     })
             //     .catch(error => console.error("Error deleting service request:", error));
             // },
-
+            deleteServiceRequest(history) {
+                console.log("Deleting service request for:", history);
+                console.log("Customer ID:", this.customerId, "Service Request ID:", history.id);
+            
+                if (!this.customerId || !history.id) {
+                    console.error("Error: Missing customerId or service request ID");
+                    return;
+                }
+            
+                fetch(`/api/customer/${this.customerId}/service_history/${history.id}`, {
+                    method: "DELETE",
+                    headers: {
+                        "Authentication-Token": localStorage.getItem("auth_token"),
+                        "Content-Type": "application/json"
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message) {
+                        console.log("Success:", data.message);
+                        this.fetchServiceHistory(this.customerId); // Refresh table
+                    } else {
+                        console.error("Error: ", data.error);
+                    }
+                })
+                .catch(error => console.error("Error deleting service request:", error));
+            }
+            
+            // deleteServiceRequest(history) {
+            //     if (!confirm("Are you sure you want to delete this service request?")) {
+            //         return;
+            //     }
+            
+            //     fetch(`/api/customer/${this.customerId}/service_history/${history.id}`, {
+            //         method: 'DELETE',
+            //         headers: {
+            //             "Content-Type": "application/json",
+            //             "Authentication-Token": localStorage.getItem("auth_token")
+            //         }
+            //     })
+            //     .then(response => response.json())
+            //     .then(data => {
+            //         if (data.message) {
+            //             console.log(data.message);
+            //             this.fetchServiceHistory(this.customerId); // Refresh table
+            //         } else {
+            //             console.error("Error: ", data.error);
+            //         }
+            //     })
+            //     .catch(error => console.error("Error deleting service request:", error));
+            // }
+,            
 
         logout() {
             localStorage.removeItem("auth_token");

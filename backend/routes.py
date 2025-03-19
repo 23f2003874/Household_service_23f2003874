@@ -4,6 +4,9 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from .model import db, User, Role, Service, Customer, ServiceProfessional, ServiceRequest
 import uuid
 from datetime import datetime
+from datetime import date  # For handling dates
+from sqlalchemy.sql import func  # For database functions like date filtering
+
 
 # ====================== Home Route ======================
 @app.route('/', methods=['GET'])
@@ -153,16 +156,213 @@ def get_admin():
 # ====================== Customer Dashboard =====================
 
 # ====================== Professional Dashboard ======================
+# @app.route("/api/professional/dashboard", methods=["GET"])
+# @auth_required("token")
+# @roles_required("professional")
+# def professional_dashboard():
+#     return jsonify({
+#         "message": f"Welcome Professional {current_user.username}!",
+#         "user_id": current_user.id,
+#         "username": current_user.username
+#     })
+# @app.route("/api/professional/dashboard", methods=["GET"])
+# @auth_required("token")
+# @roles_required("professional")
+# def professional_dashboard():
+#     print(f"🟢 Authenticated Professional: {current_user.username}")  # Debug Log
+#     return jsonify({
+#         "user": {"id": current_user.id, "username": current_user.username}
+#     })
+# @app.route("/api/professional/dashboard", methods=["GET"])
+# @auth_required("token")
+# @roles_required("professional")
+# def professional_dashboard():
+#     # Get the logged-in professional based on user_id
+#     professional = ServiceProfessional.query.filter_by(user_id=current_user.id).first()
+
+#     if not professional:
+#         return jsonify({"error": "Professional details not found"}), 404
+
+#     return jsonify({
+#         "message": f"Welcome Professional {professional.username}!",
+#         "user_id": current_user.id,
+#         "professional_id": professional.id,
+#         "username": professional.username,  # ✅ Now using `ServiceProfessional.username`
+#         "email": professional.email,
+#         "phone_number": professional.phone_number,
+#         "address": professional.address,
+#         "pin_code": professional.pin_code,
+#         "status": professional.status,
+#         "rating": professional.rating
+#     })
+
+# from flask import jsonify
+
+# @app.route("/api/professional/dashboard", methods=["GET"])
+# @auth_required("token")
+# @roles_required("professional")
+# def professional_dashboard():
+#     # Get the logged-in professional
+#     professional = ServiceProfessional.query.filter_by(user_id=current_user.id).first()
+
+#     if not professional:
+#         return jsonify({"error": "Professional details not found"}), 404
+
+#     today = date.today()
+
+#     # ✅ Fetch "Today's Services" (ONLY requested status)
+#     today_services = (
+#         ServiceRequest.query
+#         .filter_by(professional_id=professional.id, service_status="Requested")
+#         .filter(func.date(ServiceRequest.date_of_request) == today)
+#         .join(Customer, ServiceRequest.customer_id == Customer.id)
+#         .all()
+#     )
+
+#     # ✅ Fetch "Service History" (All past services with updated statuses)
+#     service_history = (
+#         ServiceRequest.query
+#         .filter_by(professional_id=professional.id)
+#         .filter(ServiceRequest.service_status.in_(["approved", "in-progress", "closed", "rejected", "cancelled"]))
+#         .join(Customer, ServiceRequest.customer_id == Customer.id)
+#         .order_by(ServiceRequest.date_of_completion.desc())
+#         .all()
+#     )
+
+#     return jsonify({
+#         "message": f"Welcome Professional {professional.username}!",
+#         "user_id": current_user.id,
+#         "professional_id": professional.id,
+#         "username": professional.username,
+#         "email": professional.email,
+#         "phone_number": professional.phone_number,
+#         "address": professional.address,
+#         "pin_code": professional.pin_code,
+#         "status": professional.status,
+#         "rating": professional.rating,
+
+#         # ✅ Only Requested Services in Today's Services
+#         "today_services": [{
+#             "id": service.id,
+#             "customer_name": service.customer.username,
+#             "phone_number": service.customer.phone_number,
+#             "address": service.customer.address,
+#             "pin_code": service.customer.pin_code,
+#             "status": service.service_status,
+#             "date_of_request": service.date_of_request.strftime("%Y-%m-%d")
+#         } for service in today_services],
+
+#         # ✅ Service History (Includes Approved, In-Progress, Closed, Rejected, Cancelled)
+#         "service_history": [{
+#             "id": service.id,
+#             "customer_name": service.customer.username,
+#             "phone_number": service.customer.phone_number,
+#             "address": service.customer.address,
+#             "pin_code": service.customer.pin_code,
+#             "status": service.service_status,
+#             "date_of_request": service.date_of_request.strftime("%Y-%m-%d"),
+#             "date_of_completion": service.date_of_completion.strftime("%Y-%m-%d") if service.date_of_completion else None,
+#             "review": service.remarks or "No review"
+#         } for service in service_history]
+#     })
 @app.route("/api/professional/dashboard", methods=["GET"])
 @auth_required("token")
 @roles_required("professional")
 def professional_dashboard():
+    professional = ServiceProfessional.query.filter_by(user_id=current_user.id).first()
+    if not professional:
+        return jsonify({"error": "Professional details not found"}), 404
+
+    today = date.today()
+
+    # ✅ Today's Services (Only "requested" services)
+    today_services = (
+        ServiceRequest.query.filter_by(professional_id=professional.id, service_status="requested")
+        .filter(func.date(ServiceRequest.date_of_request) == today)
+        .join(Customer, ServiceRequest.customer_id == Customer.id)
+        .all()
+    )
+
+    # ✅ Service History (approved, in-progress, closed, rejected, and canceled)
+    service_history = (
+        ServiceRequest.query.filter(ServiceRequest.professional_id == professional.id)
+        .filter(ServiceRequest.service_status.in_(["approved", "in-progress", "closed", "rejected", "canceled"]))
+        .join(Customer, ServiceRequest.customer_id == Customer.id)
+        .order_by(ServiceRequest.date_of_completion.desc())
+        .all()
+    )
+
     return jsonify({
-        "message": f"Welcome Professional {current_user.username}!",
+        "message": f"Welcome Professional {professional.username}!",
         "user_id": current_user.id,
-        "username": current_user.username
+        "professional_id": professional.id,
+        "username": professional.username,
+        "email": professional.email,
+        "phone_number": professional.phone_number,
+        "address": professional.address,
+        "pin_code": professional.pin_code,
+        "status": professional.status,
+        "rating": professional.rating,
+        "today_services": [{
+            "service_id": service.id,
+            "customer_name": service.customer.username,
+            "phone_number": service.customer.phone_number,
+            "address": service.customer.address,
+            "pincode": service.customer.pin_code,
+            "status": service.service_status,
+            "date_of_request": service.date_of_request.strftime("%Y-%m-%d")
+        } for service in today_services],
+        "closed_services": [{
+            "service_id": service.id,
+            "customer_name": service.customer.username,
+            "address": service.customer.address,
+            "phone_number": service.customer.phone_number,
+            "pincode": service.customer.pin_code,
+            "status": service.service_status,
+            "date_of_request": service.date_of_request.strftime("%Y-%m-%d"),
+            "date_of_completion": service.date_of_completion.strftime("%Y-%m-%d") if service.date_of_completion else None,
+            "review": service.remarks,
+            "rating": service.rating
+        } for service in service_history]
     })
 
+
+@app.route("/api/professional/accept/<int:service_id>", methods=["POST"])
+@auth_required("token")
+@roles_required("professional")
+def accept_service(service_id):
+    service = ServiceRequest.query.get(service_id)
+    
+    if not service:
+        return jsonify({"error": "Service request not found"}), 404
+
+    if service.service_status != "requested":
+        return jsonify({"error": "Service is not in requested status"}), 400
+
+    # Update status to "approved"
+    service.service_status = "approved"
+    db.session.commit()
+
+    return jsonify({"message": "Service request approved successfully"}), 200
+
+
+@app.route("/api/professional/reject/<int:service_id>", methods=["POST"])
+@auth_required("token")
+@roles_required("professional")
+def reject_service(service_id):
+    service = ServiceRequest.query.get(service_id)
+    
+    if not service:
+        return jsonify({"error": "Service request not found"}), 404
+
+    if service.service_status != "requested":
+        return jsonify({"error": "Service is not in requested status"}), 400
+
+    # Update status to "rejected"
+    service.service_status = "rejected"
+    db.session.commit()
+
+    return jsonify({"message": "Service request rejected successfully"}), 200
 
 # ====================== User Logout ======================
 @app.route("/api/logout", methods=["POST"])
@@ -367,29 +567,61 @@ def get_professional_services():
 
 
 
-@app.route("/api/professional/new_services", methods=["GET"])
-def get_new_services():
-    professional_id = request.args.get("professional_id")
-    if not professional_id:
-        return jsonify({"error": "Professional ID is required"}), 400
+# @app.route("/api/professional/new_services", methods=["GET"])
+# def get_new_services():
+#     professional_id = request.args.get("professional_id")
+#     if not professional_id:
+#         return jsonify({"error": "Professional ID is required"}), 400
 
-    services = ServiceRequest.query.filter_by(professional_id=professional_id, service_status="requested").all()
-    service_data = []
+#     services = ServiceRequest.query.filter_by(professional_id=professional_id, service_status="requested").all()
+#     service_data = []
     
-    for service in services:
-        customer = Customer.query.get(service.customer_id)
-        user = User.query.get(customer.user_id) if customer else None
+#     for service in services:
+#         customer = Customer.query.get(service.customer_id)
+#         user = User.query.get(customer.user_id) if customer else None
         
-        service_data.append({
-            "id": service.id,
-            "customer_id": service.customer_id,
-            "customer_name": user.username if user else "Unknown",
-            "address": customer.address if customer else "Unknown",
-            "date_of_request": service.date_of_request,
-            "service_status": service.service_status
-        })
+#         service_data.append({
+#             "id": service.id,
+#             "customer_id": service.customer_id,
+#             "customer_name": user.username if user else "Unknown",
+#             "address": customer.address if customer else "Unknown",
+#             "date_of_request": service.date_of_request,
+#             "service_status": service.service_status
+#         })
     
-    return jsonify({"services": service_data})
+#     return jsonify({"services": service_data})
+@app.route("/api/professional/service-requests", methods=["GET"])
+@auth_required("token")
+@roles_required("professional")
+def professional_service_requests():
+    # Get the logged-in professional
+    professional = ServiceProfessional.query.filter_by(user_id=current_user.id).first()
+
+    if not professional:
+        return jsonify({"error": "Professional details not found"}), 404
+
+    # Fetch all service requests assigned to this professional
+    service_requests = ServiceRequest.query.filter_by(professional_id=professional.id).all()
+
+    # Format the response
+    service_requests_data = []
+    for req in service_requests:
+        service_requests_data.append({
+            "id": req.id,  # ✅ Matches frontend 'request.id'
+            "status": req.service_status,  # ✅ Needed for Approve/Reject buttons
+            "customer": {
+                "username": req.customer.username,  # ✅ Matches frontend 'customer.username'
+                "phone_number": req.customer.phone_number,  # ✅ Matches frontend 'customer.phone_number'
+                "address": req.customer.address,  # ✅ Matches frontend 'customer.address'
+                "pin_code": req.customer.pin_code,  # ✅ Matches frontend 'customer.pin_code'
+            }
+        })
+
+    return jsonify({
+        "professional_id": professional.id,
+        "newServiceRequests": service_requests_data  # ✅ Matches Vue's `newServiceRequests`
+    })
+
 
 @app.route("/api/professional/closed_services", methods=["GET"])
 def get_closed_services():
@@ -475,38 +707,243 @@ def get_closed_services():
 #         }
 #         for service in services
 #     ])
+# @app.route("/api/professional/service-history", methods=["GET"])
+# @auth_required("token")
+# @roles_required("professional")
+# def professional_service_history():
+#     # Get the logged-in professional
+#     professional = ServiceProfessional.query.filter_by(user_id=current_user.id).first()
+
+#     if not professional:
+#         return jsonify({"error": "Professional details not found"}), 404
+
+#     # Fetch completed service requests for this professional
+#     service_history = ServiceRequest.query.filter_by(
+#         professional_id=professional.id, service_status="closed"
+#     ).all()
+
+#     # Format the response
+#     service_history_data = []
+#     for req in service_history:
+#         service_history_data.append({
+#             "id": req.id,
+#             "customer": {
+#                 "username": req.customer.username,
+#                 "address": req.customer.address,
+#                 "phone_number": req.customer.phone_number,
+#                 "pin_code": req.customer.pin_code
+#             },
+#             "date_of_completion": req.date_of_completion.strftime("%Y-%m-%d") if req.date_of_completion else "Pending",
+#             "remarks": req.remarks,
+#             "rating": req.rating if req.rating else "Not Rated"
+#         })
+
+#     return jsonify({
+#         "professional_id": professional.id,
+#         "service_history": service_history_data
+#     })
+
+
+@app.route("/api/professional/service-history", methods=["GET"])
+@auth_required("token")
+@roles_required("professional")
+def get_get_service_history():
+    professional = ServiceProfessional.query.filter_by(user_id=current_user.id).first()
+    if not professional:
+        return jsonify({"error": "Professional not found"}), 404
+
+    closed_services = (
+        ServiceRequest.query
+        .filter_by(professional_id=professional.id)
+        .filter(ServiceRequest.service_status != "requested")  # ✅ Fetch all non-requested services
+        .order_by(ServiceRequest.date_of_completion.desc())
+        .all()
+    )
+
+    return jsonify([
+        {
+            "service_id": service.id,
+            "customer_name": service.customer.username,
+            "address": service.customer.address,
+            "phone_number": service.customer.phone_number,
+            "pincode": service.customer.pin_code,
+            "date_of_request": service.date_of_request.strftime("%Y-%m-%d"),
+            "date_of_completion": service.date_of_completion.strftime("%Y-%m-%d") if service.date_of_completion else None,
+            "rating": service.rating,
+            "remarks": service.remarks,
+            "status": service.service_status
+        }
+        for service in closed_services
+    ])
+
+# @app.route("/api/professional/approve_request", methods=["POST"])
+# def approve_service_request():
+#     """Approve a service request (change status to 'accepted')."""
+#     data = request.get_json()
+#     request_id = data.get("request_id")
+
+#     service = ServiceRequest.query.get(request_id)
+#     if not service:
+#         return jsonify({"error": "Service request not found"}), 404
+
+#     service.service_status = "accepted"
+#     db.session.commit()
+
+#     return jsonify({"message": "Service request approved successfully"}), 200
+
+# @app.route("/api/professional/reject_request", methods=["POST"])
+# def reject_service_request():
+#     """Reject a service request (change status to 'rejected')."""
+#     data = request.get_json()
+#     request_id = data.get("request_id")
+
+#     service = ServiceRequest.query.get(request_id)
+#     if not service:
+#         return jsonify({"error": "Service request not found"}), 404
+
+#     service.service_status = "rejected"
+#     db.session.commit()
+
+#     return jsonify({"message": "Service request rejected successfully"}), 200
+# @app.route('/api/professional/approve_request', methods=['POST'])
+# @auth_required("token")
+# def approve_service_request():
+#     data = request.get_json()
+#     service_id = data.get('service_id')
+
+#     # Fetch the service request from the database
+#     service_request = ServiceRequest.query.get(service_id)
+
+#     if not service_request:
+#         return jsonify({'message': 'Service request not found.'}), 404
+
+#     # Change the status to 'Approved'
+#     service_request.status = 'Approved'
+
+#     # Commit the changes to the database
+#     db.session.commit()
+
+#     return jsonify({'message': 'Service request approved successfully!'}), 200
+
+# @app.route("/api/professional/approve_request", methods=["POST"])
+# @auth_required("token")
+# def approve_request():
+#     data = request.json
+#     service_id = data.get("service_id")
+
+#     service_request = ServiceRequest.query.get(service_id)
+#     if not service_request:
+#         return jsonify({"error": "Service request not found"}), 404
+
+#     service_request.status = "Approved"
+#     db.session.commit()  # Ensure this line is here to save changes
+
+#     return jsonify({"message": "Service request approved successfully!"})
+# @app.route("/api/professional/service-history", methods=["GET"])
+# @auth_required("token")
+# @roles_required("professional")
+# def get_professional_service_history():
+#     print(f"🔍 Fetching service history for professional ID: {current_user.id}")
+
+#     professional = ServiceProfessional.query.filter_by(user_id=current_user.id).first()
+#     if not professional:
+#         return jsonify({"error": "Professional not found"}), 404
+
+#     history = ServiceRequest.query.filter(ServiceRequest.professional_id == professional.id).all()
+
+#     if not history:
+#         print("⚠️ No service history found!")
+#         return jsonify([])
+
+#     history_data = [
+#         {
+#             "service_id": service.id,
+#             "customer_name": service.customer.user.username if service.customer and service.customer.user else "N/A",
+#             "customer_email": service.customer.user.email if service.customer and service.customer.user else "N/A",
+#             "customer_phone": service.customer.phone_number if service.customer else "N/A",
+#             "service_name": service.service.name if service.service else "Unknown",
+#             "date_of_request": service.date_of_request.strftime("%Y-%m-%d"),
+#             "date_of_completion": service.date_of_completion.strftime("%Y-%m-%d") if service.date_of_completion else None,
+#             "status": service.service_status
+#         }
+#         for service in history
+#     ]
+
+#     return jsonify(history_data)
 
 @app.route("/api/professional/approve_request", methods=["POST"])
-def approve_service_request():
-    """Approve a service request (change status to 'accepted')."""
-    data = request.get_json()
-    request_id = data.get("request_id")
+@auth_required("token")
+def approve_request():
+    data = request.json
+    service_id = data.get("service_id")
 
-    service = ServiceRequest.query.get(request_id)
-    if not service:
+    service_request = ServiceRequest.query.get(service_id)
+    if not service_request:
         return jsonify({"error": "Service request not found"}), 404
 
-    service.service_status = "accepted"
-    db.session.commit()
+    print(f"🔄 Before update: Service ID {service_id}, Status: {service_request.service_status}")
 
-    return jsonify({"message": "Service request approved successfully"}), 200
+    # Fix field name and explicitly add to session
+    service_request.service_status = "approved"
+    db.session.add(service_request)
 
-@app.route("/api/professional/reject_request", methods=["POST"])
+    try:
+        db.session.commit()
+        db.session.refresh(service_request)  # Ensure latest data is fetched
+        print(f"✅ After update: Service ID {service_id}, Status: {service_request.service_status}")
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Database commit failed: {e}")
+        return jsonify({"error": "Database commit failed"}), 500
+
+    return jsonify({"message": "Service request approved successfully!", "service_status": service_request.service_status})
+
+@app.route('/api/professional/reject_request', methods=['POST'])
+@auth_required("token")
 def reject_service_request():
-    """Reject a service request (change status to 'rejected')."""
     data = request.get_json()
-    request_id = data.get("request_id")
+    service_id = data.get('service_id')
 
-    service = ServiceRequest.query.get(request_id)
-    if not service:
-        return jsonify({"error": "Service request not found"}), 404
+    # Fetch the service request from the database
+    service_request = ServiceRequest.query.get(service_id)
 
-    service.service_status = "rejected"
+    if not service_request:
+        return jsonify({'message': 'Service request not found.'}), 404
+
+    # Change the status to 'Rejected'
+    service_request.status = 'Rejected'
+
+    # Commit the changes to the database
     db.session.commit()
 
-    return jsonify({"message": "Service request rejected successfully"}), 200
+    return jsonify({'message': 'Service request rejected successfully!'}), 200
+@app.route("/api/professional/reject_request", methods=["POST"])
+@auth_required("token")
+def reject_request():
+    data = request.json
+    service_id = data.get("service_id")
 
-# @app.route("/api/search_services", methods=["GET"])
+    service_request = ServiceRequest.query.get(service_id)
+    if not service_request:
+        return jsonify({"error": "Service request not found"}), 404
+
+    print(f"🔄 Before update: Service ID {service_id}, Status: {service_request.service_status}")
+
+    service_request.service_status = "rejected"
+    db.session.add(service_request)
+
+    try:
+        db.session.commit()
+        db.session.refresh(service_request)
+        print(f"✅ After update: Service ID {service_id}, Status: {service_request.service_status}")
+    except Exception as e:
+        db.session.rollback()
+        print(f"❌ Database commit failed: {e}")
+        return jsonify({"error": "Database commit failed"}), 500
+
+    return jsonify({"message": "Service request rejected successfully!", "service_status": service_request.service_status})
+
+# # @app.route("/api/search_services", methods=["GET"])
 # def search_services():
 #     customer_id = request.args.get("customer_id")
 #     customer_name = request.args.get("customer_name")
@@ -612,6 +1049,26 @@ def customer_dashboard():
         "username": current_user.username
     })
 
+# @app.route("/api/customer/services", methods=["GET"])
+# @auth_required("token")
+# def get_customer_services():
+#     services = Service.query.all()
+#     service_list = [
+#         {
+#             "id": service.id,
+#             "name": service.name,
+#             "description": service.description,
+#             "base_price": service.base_price,
+#             "time_required": service.time_required,
+#             "professionals": [
+#                 {"id": sp.id, "name": sp.user.username if sp.user else "Unknown"}
+#                 for sp in service.professionals  # Use 'professionals' instead of 'service_professionals'
+#             ]
+#         }
+#         for service in services
+#     ]
+#     return jsonify(service_list)
+
 @app.route("/api/customer/services", methods=["GET"])
 @auth_required("token")
 def get_customer_services():
@@ -624,8 +1081,12 @@ def get_customer_services():
             "base_price": service.base_price,
             "time_required": service.time_required,
             "professionals": [
-                {"id": sp.id, "name": sp.user.username if sp.user else "Unknown"}
-                for sp in service.professionals  # Use 'professionals' instead of 'service_professionals'
+                {
+                    "id": sp.id,
+                    "name": sp.user.username if sp.user else "Unknown",  # ✅ Ensure full name
+                    "experience": sp.experience  # ✅ Include experience
+                }
+                for sp in service.professionals  # ✅ Fetch linked professionals
             ]
         }
         for service in services
@@ -633,26 +1094,86 @@ def get_customer_services():
     return jsonify(service_list)
 
 
+# @app.route("/api/customer/book_service", methods=["POST"])
+# @auth_required("token")
+# def book_service():
+#     data = request.json
+#     service_id = data.get("service_id")
+    
+#     # ✅ Get the correct Customer ID based on current user
+#     customer = Customer.query.filter_by(user_id=current_user.id).first()
+#     if not customer:
+#         return jsonify({"error": "Customer not found"}), 404
+    
+#     service = Service.query.get(service_id)
+#     if not service or not service.professionals:
+#         return jsonify({"success": False, "message": "No professionals available."}), 400
 
+#     professional = service.professionals[0]  # Assign first available professional
+
+#     new_request = ServiceRequest(
+#         customer_id=customer.id,  # ✅ Use customer.id instead of user_id
+#         professional_id=professional.id,
+#         service_id=service.id,
+#         service_status="requested"
+#     )
+
+#     db.session.add(new_request)
+#     db.session.commit()
+
+#     return jsonify({"success": True, "message": "Service booked successfully."})
+# @app.route("/api/customer/book_service", methods=["POST"])
+# @auth_required("token")
+# def book_service():
+#     data = request.json
+#     service_id = data.get("service_id")
+#     professional_id = data.get("professional_id")  # ✅ Get selected professional
+
+#     customer = Customer.query.filter_by(user_id=current_user.id).first()
+#     if not customer:
+#         return jsonify({"error": "Customer not found"}), 404
+    
+#     service = Service.query.get(service_id)
+#     if not service:
+#         return jsonify({"success": False, "message": "Service not found."}), 400
+
+#     professional = ServiceProfessional.query.get(professional_id)
+#     if not professional or professional not in service.professionals:
+#         return jsonify({"success": False, "message": "Invalid professional selection."}), 400
+
+#     new_request = ServiceRequest(
+#         customer_id=customer.id,
+#         professional_id=professional.id,
+#         service_id=service.id,
+#         service_status="requested"
+#     )
+
+#     db.session.add(new_request)
+#     db.session.commit()
+
+#     return jsonify({"success": True, "message": "Service booked successfully."})
 @app.route("/api/customer/book_service", methods=["POST"])
 @auth_required("token")
 def book_service():
     data = request.json
     service_id = data.get("service_id")
+    pro_id = data.get("pro_id")  # ✅ Get selected pro_id
     
-    # ✅ Get the correct Customer ID based on current user
     customer = Customer.query.filter_by(user_id=current_user.id).first()
     if not customer:
         return jsonify({"error": "Customer not found"}), 404
     
     service = Service.query.get(service_id)
-    if not service or not service.professionals:
-        return jsonify({"success": False, "message": "No professionals available."}), 400
+    if not service:
+        return jsonify({"success": False, "message": "Service not found."}), 400
 
-    professional = service.professionals[0]  # Assign first available professional
+    professional = ServiceProfessional.query.get(pro_id)  # ✅ Find selected pro
+    if not professional:
+        return jsonify({"success": False, "message": "Selected professional not found."}), 400
 
+    # Create a new service request with the selected professional
     new_request = ServiceRequest(
-        customer_id=customer.id,  # ✅ Use customer.id instead of user_id
+        customer_id=customer.id,
         professional_id=professional.id,
         service_id=service.id,
         service_status="requested"
@@ -699,8 +1220,6 @@ def update_service_date(customer_id, service_id):
         return jsonify({"error": f"Error updating date: {str(e)}"}), 500
 
 
-
-
 @app.route("/api/customer/<int:customer_id>/service_history", methods=["GET"])
 @auth_required("token")
 def get_service_history(customer_id):
@@ -731,72 +1250,138 @@ def get_service_history(customer_id):
             "phone_no": h.professional.phone_number if h.professional else "N/A",
             "date_of_request": h.date_of_request,
             "date_of_completion": h.date_of_completion,
+            "rating": h.rating if hasattr(h, "rating") else None,  # ✅ Ensure rating is included
+            "remark": h.remark if hasattr(h, "remark") else None,  
             "status": h.service_status
         })
 
     return jsonify(history_data)
 
-
-@app.route('/api/customer/service_history/<int:service_id>/review', methods=['POST'])
-@auth_required("token")
-def close_service_request(service_id):
-    data = request.json  # Get request data safely
-    rating = data.get("rating")  # Extract rating
-    
-    if rating is not None:  # Ensure rating is a valid number
-        try:
-            rating = float(rating)  # Convert to float
-        except ValueError:
-            return jsonify({"error": "Invalid rating format"}), 400
-    
-    if rating is not None and (rating < 1 or rating > 5):
-        return jsonify({"error": "Rating must be between 1 and 5"}), 400
-    
-    service_request = ServiceRequest.query.get(service_id)
-    if not service_request:
-        return jsonify({"error": "Service request not found"}), 404
-    
-    # Update service request details
-    service_request.service_status = "closed"
-    service_request.remarks = data.get("remark", "")
-    service_request.rating = rating
-    
-    # Update professional rating (average of completed service ratings)
-    professional = service_request.professional
-    if professional:
-        completed_services = ServiceRequest.query.filter_by(
-            professional_id=professional.id, service_status="closed"
-        ).all()
-        
-        total_rating = sum(s.rating for s in completed_services if s.rating is not None)
-        professional.rating = total_rating / len(completed_services) if completed_services else 0.0
-
-    db.session.commit()
-    return jsonify({"message": "Service request closed with review!"})
-
-
-
-
-# 1️⃣ Fetch Available Services for Customers
-# @app.route("/api/customer/services", methods=["GET"])
+# @app.route("/api/customer/<int:customer_id>/service_history", methods=["GET"])
 # @auth_required("token")
-# def get_customer_services():
-#     services = Service.query.all()
-#     service_list = [
-#         {
-#             "id": service.id,
-#             "name": service.name,
-#             "description": service.description,
-#             "base_price": service.base_price,
-#             "time_required": service.time_required,
-#             "professionals": [
-#                 {"id": sp.id, "name": sp.user.username if sp.user else "Unknown"}
-#                 for sp in service.service_professionals
-#             ]
-#         }
-#         for service in services
+# def get_service_history(customer_id):
+#     print(f"🔍 Fetching service history for customer_id: {customer_id}")
+
+#     history = ServiceRequest.query.filter_by(customer_id=customer_id).all()
+    
+#     if not history:
+#         print("⚠️ No service history found!")
+#         return jsonify([])
+
+#     history_data = []
+#     for h in history:
+#         print(f"➡️ Service ID: {h.id}, Customer ID: {h.customer_id}, Customer Object: {h.customer}")
+
+#         # Debug customer details
+#         if h.customer:
+#             print(f"✅ Customer Exists: ID {h.customer.id}, Username: {h.customer.username}, User: {h.customer.user}")
+
+#         history_data.append({
+#             "id": h.id,
+#             "customer_id": h.customer_id,
+#             "customer_name": h.customer.user.username if h.customer and h.customer.user else "N/A",  # ✅ Fix here
+#             "service_name": h.service.name if h.service else "Unknown",
+#             "professional_id": h.professional.id if h.professional else None,
+#             "professional_username": h.professional.user.username if h.professional and h.professional.user else "N/A",
+#             "professional_email": h.professional.user.email if h.professional and h.professional.user else "N/A",
+#             "phone_no": h.professional.phone_number if h.professional else "N/A",
+#             "date_of_request": h.date_of_request,
+#             "date_of_completion": h.date_of_completion,
+#             "status": h.service_status
+#         })
+
+#     return jsonify(history_data)
+
+
+# @app.route('/api/customer/service_history/<int:service_id>/review', methods=['POST'])
+# @auth_required("token")
+# def close_service_request(service_id):
+#     data = request.json  # Get request data safely
+#     rating = data.get("rating")  # Extract rating
+    
+#     if rating is not None:  # Ensure rating is a valid number
+#         try:
+#             rating = float(rating)  # Convert to float
+#         except ValueError:
+#             return jsonify({"error": "Invalid rating format"}), 400
+    
+#     if rating is not None and (rating < 1 or rating > 5):
+#         return jsonify({"error": "Rating must be between 1 and 5"}), 400
+    
+#     service_request = ServiceRequest.query.get(service_id)
+#     if not service_request:
+#         return jsonify({"error": "Service request not found"}), 404
+    
+#     # Update service request details
+#     service_request.service_status = "closed"
+#     service_request.date_of_completion = datetime.utcnow() 
+#     service_request.remarks = data.get("remark", "")
+#     service_request.rating = rating
+    
+#     # Update professional rating (average of completed service ratings)
+#     professional = service_request.professional
+#     if professional:
+#         completed_services = ServiceRequest.query.filter_by(
+#             professional_id=professional.id, service_status="closed"
+#         ).all()
+        
+#         total_rating = sum(s.rating for s in completed_services if s.rating is not None)
+#         professional.rating = total_rating / len(completed_services) if completed_services else 0.0
+
+#     db.session.commit()
+#     return jsonify({"message": "Service request closed with review!"})
+
+
+
+
+# # 1️⃣ Fetch Available Services for Customers
+# # @app.route("/api/customer/services", methods=["GET"])
+# # @auth_required("token")
+# # def get_customer_services():
+# #     services = Service.query.all()
+# #     service_list = [
+# #         {
+# #             "id": service.id,
+# #             "name": service.name,
+# #             "description": service.description,
+# #             "base_price": service.base_price,
+# #             "time_required": service.time_required,
+# #             "professionals": [
+# #                 {"id": sp.id, "name": sp.user.username if sp.user else "Unknown"}
+# #                 for sp in service.service_professionals
+# #             ]
+# #         }
+# #         for service in services
 #     ]
 #     return jsonify(service_list)
+@app.route("/api/customer/service_history/<int:service_id>/review", methods=["POST"])
+@auth_required("token")
+def submit_service_review(service_id):
+    data = request.get_json()
+    
+    rating = data.get("rating")
+    remark = data.get("remark")
+
+    if not rating or not remark:
+        return jsonify({"error": "Rating and remark are required"}), 400
+
+    service_request = ServiceRequest.query.get(service_id)
+
+    if not service_request:
+        return jsonify({"error": "Service request not found"}), 404
+
+    if service_request.service_status == "closed":
+        return jsonify({"message": "Service request is already closed with review!"})
+
+    # Update service request
+    service_request.rating = rating
+    service_request.remark = remark
+    service_request.service_status = "closed"
+    service_request.date_of_completion = datetime.utcnow()
+
+    db.session.commit()
+
+    return jsonify({"message": "Service request closed with review!"})
 
 
 
@@ -1212,6 +1797,49 @@ def get_new_service_requests(professional_id):
 #     # Commit the changes to the database
 #     db.session.commit()
     
+#     return jsonify({'message': 'Service request rejected successfully!'}), 200
+
+
+
+# @app.route('/api/professional/approve_request', methods=['POST'])
+# @auth_required("token")
+# def approve_service_request():
+#     data = request.get_json()
+#     service_id = data.get('service_id')
+
+#     # Fetch the service request from the database
+#     service_request = ServiceRequest.query.get(service_id)
+
+#     if not service_request:
+#         return jsonify({'message': 'Service request not found.'}), 404
+
+#     # Change the status to 'Approved'
+#     service_request.status = 'Approved'
+
+#     # Commit the changes to the database
+#     db.session.commit()
+
+#     return jsonify({'message': 'Service request approved successfully!'}), 200
+
+
+# @app.route('/api/professional/reject_request', methods=['POST'])
+# @auth_required("token")
+# def reject_service_request():
+#     data = request.get_json()
+#     service_id = data.get('service_id')
+
+#     # Fetch the service request from the database
+#     service_request = ServiceRequest.query.get(service_id)
+
+#     if not service_request:
+#         return jsonify({'message': 'Service request not found.'}), 404
+
+#     # Change the status to 'Rejected'
+#     service_request.status = 'Rejected'
+
+#     # Commit the changes to the database
+#     db.session.commit()
+
 #     return jsonify({'message': 'Service request rejected successfully!'}), 200
 
 # @app.route('/api/professional/complete_service', methods=['POST'])
