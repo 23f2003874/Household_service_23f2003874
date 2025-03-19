@@ -169,15 +169,11 @@ export default {
                                 <p class="card-text"><strong>Email:</strong> {{ customer.email }}</p>
                                 <p class="card-text"><strong>Address:</strong> {{ customer.address }}</p>
                                 <p class="card-text"><strong>Pin Code:</strong> {{ customer.pin_code }}</p>
-                                <p class="card-text"><strong>Status:</strong> 
-                                    <span :class="customer.status === 'active' ? 'text-success' : 'text-danger'">
-                                        {{ customer.status }}
-                                    </span>
-                                </p>
-                                <div class="d-flex justify-content-between">
-                                    <button class="btn btn-secondary" @click="toggleCustomerStatus(customer)">
-                                        {{ customer.status === 'active' ? 'Block' : 'Unblock' }}
-                                    </button>
+                                <p class="card-text">Status: {{ customer.status }}</p>
+                                <select class="form-select mb-2" v-model="customer.status" @change="updateCustomerStatus(customer)">
+    <option value="active">Active</option>
+    <option value="blocked">Blocked</option>
+</select>
                                     <button class="btn btn-danger" @click="deleteCustomer(customer.id)">Delete</button>
                                 </div>
                             </div>
@@ -276,15 +272,6 @@ export default {
     .catch(error => console.error("Error fetching services:", error));
 },
     
-    //   loadProfessionals() {
-    //       fetch("/api/professionals", {
-    //           method: "GET",
-    //           headers: { "Content-Type": "application/json", "Authentication-Token": localStorage.getItem("auth_token") }
-    //       })
-    //       .then(response => response.json())
-    //       .then(data => this.professionals = data)
-    //       .catch(error => console.error("Error fetching professionals:", error));
-    //   },
     loadProfessionals() {
         fetch("http://127.0.0.1:5000/api/professionals", {
             method: "GET",
@@ -319,7 +306,22 @@ updateProfessionalStatus(professional) {
     .catch(error => console.error("Error updating professional status:", error));
 },
 
-    
+updateCustomerStatus(customer) {
+    fetch(`/api/customers/${customer.id}/status`, {
+        method: "PUT",
+        headers: {
+            "Content-Type": "application/json",
+            "Authentication-Token": localStorage.getItem("auth_token")
+        },
+        body: JSON.stringify({ status: customer.status })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log("Customer status updated", data);
+    })
+    .catch(error => console.error("Error updating customer status:", error));
+}
+,
     
       loadCustomers() {
           fetch("http://127.0.0.1:5000/api/customers", {
@@ -425,84 +427,9 @@ updateProfessionalStatus(professional) {
             .catch(error => console.error("Error deleting professional:", error));
         }
     },
-    // Toggle customer status (Active <-> Inactive)
-    toggleCustomerStatus(customer) {
-        const newStatus = customer.status === "active" ? "inactive" : "active";
-
-        fetch(`/api/customers/${customer.id}`, {
-            method: "PATCH",
-            headers: {
-                "Content-Type": "application/json",
-                "Authentication-Token": localStorage.getItem("auth_token")
-            },
-            body: JSON.stringify({ status: newStatus })
-        })
-        .then(response => response.json())
-        .then(() => {
-            console.log("Customer status updated");
-            this.loadCustomers();
-        })
-        .catch(error => console.error("Error updating customer status:", error));
-    },
-}
-         // Toggle professional status (Inactive <-> Active)
-          
-    // toggleProfessionalStatus(professional) {
-    //           let newStatus = professional.status === 'active' ? 'blocked' : 'active';  // Toggle between active and blocked
-    //           if (professional.status === 'inactive') {
-    //             newStatus = 'active';  // Activate the professional if they are inactive
-    //           }
-              
-    //           fetch(`/api/professionals/${professional.id}/status`, {
-    //             method: "PUT",
-    //             headers: {
-    //               "Content-Type": "application/json",
-    //               "Authentication-Token": localStorage.getItem("auth_token")
-    //             },
-    //             body: JSON.stringify({ status: newStatus })
-    //           })
-    //           .then(response => response.json())
-    //           .then(data => {
-    //             professional.status = newStatus; // Update status on the frontend
-    //             console.log("Professional status updated", data);
-    //           })
-    //           .catch(error => console.error("Error updating professional status:", error));
-    //         }
-    //       },
-    // toggleProfessionalStatus(professional) {
-    //     const newStatus = professional.status === "active" ? "inactive" : "active";
-
-    //     fetch(`/api/professionals/${professional.id}`, {
-    //         method: "PATCH",
-    //         headers: {
-    //             "Content-Type": "application/json",
-    //             "Authentication-Token": localStorage.getItem("auth_token")
-    //         },
-    //         body: JSON.stringify({ status: newStatus })
-    //     })
-    //     .then(response => response.json())
-    //     .then(() => {
-    //         console.log("Professional status updated");
-    //         this.loadProfessionals();
-    //     })
-    //     .catch(error => console.error("Error updating professional status:", error));
-    // },
-    // deleteCustomer(customerId) {
-    //     if (confirm("Are you sure you want to delete this customer?")) {
-    //         fetch(`/api/customers/${customerId}`, {
-    //             method: "DELETE",
-    //             headers: {"Content-Type": "application/json",
-    //                 "Authentication-Token": localStorage.getItem("auth_token")
-    //             }
-    //         })
-    //         .then(response => response.json())
-    //         .then(() => {
-    //             console.log("Customer deleted");
-    //             this.loadCustomers();
-    //         })
-    //         .catch(error => console.error("Error deleting customer:", error));
-    //     }
-    // },
+    
+  }
+        
 ,
   computed: {
     filteredCustomers() {
@@ -519,249 +446,4 @@ updateProfessionalStatus(professional) {
     }
   }
 }
-
-// exp
-//                       
-//           
-//                             <h5 class="card-title">{{ professional.username }}</h5>
-//                             <p class="card-text">Email: {{ professional.email }}</p>
-//                             <p class="card-text">Experience: {{ professional.experience }} years</p>
-//                             <p class="card-text">Rating: {{ professional.rating || 'Not rated' }}</p>
-//                             <button class="btn btn-danger me-2" @click="deleteProfessional(professionl.id)">Delete</button>
-//                           <button class="btn btn-secondary" @click="toggleProfessionalStatus(professional)">{{ professional.status === 'active' ? 'Block' : 'Unblock' }}</button>
-//                         </div>
-//                     </div>
-//                 </div>
-//             </div>
-//             <p v-else>No professionals available.</p>
-//           <h3>Customers</h3>
-//           <div v-if="customers.length" class="row">
-//               <div class="col-md-4" v-for="customer in customers" :key="customer.id">
-//                   <div class="card mb-3">
-//                       <div class="card-body">
-//                           <h5 class="card-title">{{ customer.username }}</h5>
-//                           <p class="card-text">Email: {{ customer.email }}</p>
-//                           <p class="card-text">Address: {{ customer.address }}</p>
-//                           <p class="card-text">Status: {{ customer.status }}</p>
-//                           <button class="btn btn-danger me-2" @click="deleteCustomer(customer.id)">Delete</button>
-//                           <button class="btn btn-secondary" @click="toggleCustomerStatus(customer)">{{ customer.status === 'active' ? 'Block' : 'Unblock' }}</button>
-//                       </div>
-//                   </div>
-//               </div>
-//           </div>
-
-//           <h3>Service Requests</h3>
-//           <div v-if="serviceRequests.length" class="row">
-//               <div class="col-md-4" v-for="request in serviceRequests" :key="request.id">
-//                   <div class="card mb-3">
-//                       <div class="card-body">
-//                           <h5 class="card-title">Service: {{ request.service_name }}</h5>
-//                           <p class="card-text">Customer: {{ request.customer_name }}</p>
-//                           <p class="card-text">Status: {{ request.status }}</p>
-//                       </div>
-//                   </div>
-//               </div>
-//           </div>
-//           <p v-else>No service requests available.</p>
-//       </div>
-//   </div>
-//   `,
-
-//   data() {
-//       return {
-//           adminData: {},
-//           services: [],
-//           professionals: [],
-//           customers: [],
-//           serviceRequests: [],
-//           showServiceForm: false,
-//           editingService: false,
-//           newService: { name: '', base_price: '', time_required: '', description: '' }
-//       };
-//   },
-
-//   mounted() {
-//       this.loadServices();
-//       this.loadProfessionals();
-//       this.loadCustomers();
-//       this.loadServiceRequests();
-//   },
-//   methods: {
-//     // Create a new service
-//     createService() {
-//         const url = this.editingService 
-//             ? `http://127.0.0.1:5000/api/services/${this.newService.id}` // Update if editing
-//             : "http://127.0.0.1:5000/api/services"; // Create if new
-
-//         const method = this.editingService ? "PUT" : "POST";
-
-//         fetch(url, {
-//             method: method,
-//             headers: {
-//                 "Content-Type": "application/json",
-//                 "Authentication-Token": localStorage.getItem("auth_token")
-//             },
-//             body: JSON.stringify(this.newService)
-//         })
-//         .then(response => response.json())
-//         .then(data => {
-//             console.log(this.editingService ? "Service updated:" : "Service created:", data);
-//             this.loadServices(); // Refresh service list
-//             this.closeServiceForm();
-//         })
-//         .catch(error => console.error("Error saving service:", error));
-//     },
-
-//     // Edit an existing service (opens modal with existing values)
-//     editService(service) {
-//         this.newService = { ...service };
-//         this.showServiceForm = true;
-//         this.editingService = true;
-//     },
-
-//     // Delete a service
-//     deleteService(id) {
-//         if (confirm("Are you sure you want to delete this service?")) {
-//             fetch(`http://127.0.0.1:5000/api/services/${id}`, {
-//                 method: "DELETE",
-//                 headers: {
-//                     "Authentication-Token": localStorage.getItem("auth_token")
-//                 }
-//             })
-//             .then(response => response.json())
-//             .then(() => {
-//                 console.log("Service deleted");
-//                 this.loadServices();
-//             })
-//             .catch(error => console.error("Error deleting service:", error));
-//         }
-//     },
-
-//     // Delete a customer
-//     deleteCustomer(id) {
-//         if (confirm("Are you sure you want to delete this customer?")) {
-//             fetch(`http://127.0.0.1:5000/api/customers/${id}`, {
-//                 method: "DELETE",
-//                 headers: {
-//                     "Authentication-Token": localStorage.getItem("auth_token")
-//                 }
-//             })
-//             .then(response => response.json())
-//             .then(() => {
-//                 console.log("Customer deleted");
-//                 this.loadCustomers();
-//             })
-//             .catch(error => console.error("Error deleting customer:", error));
-//         }
-//     },
-
-//     // Toggle customer status (Active <-> Inactive)
-//     toggleCustomerStatus(customer) {
-//         const newStatus = customer.status === "active" ? "inactive" : "active";
-
-//         fetch(`http://127.0.0.1:5000/api/customers/${customer.id}`, {
-//             method: "PATCH",
-//             headers: {
-//                 "Content-Type": "application/json",
-//                 "Authentication-Token": localStorage.getItem("auth_token")
-//             },
-//             body: JSON.stringify({ status: newStatus })
-//         })
-//         .then(response => response.json())
-//         .then(() => {
-//             console.log("Customer status updated");
-//             this.loadCustomers();
-//         })
-//         .catch(error => console.error("Error updating customer status:", error));
-//     },
-
-//     // Toggle professional status (Inactive <-> Active)
-//     toggleProfessionalStatus(professional) {
-//         const newStatus = professional.status === "active" ? "inactive" : "active";
-
-//         fetch(`http://127.0.0.1:5000/api/professionals/${professional.id}`, {
-//             method: "PATCH",
-//             headers: {
-//                 "Content-Type": "application/json",
-//                 "Authentication-Token": localStorage.getItem("auth_token")
-//             },
-//             body: JSON.stringify({ status: newStatus })
-//         })
-//         .then(response => response.json())
-//         .then(() => {
-//             console.log("Professional status updated");
-//             this.loadProfessionals();
-//         })
-//         .catch(error => console.error("Error updating professional status:", error));
-//     },
-
-//     // Delete a professional
-//     deleteProfessional(id) {
-//         if (confirm("Are you sure you want to delete this professional?")) {
-//             fetch(`http://127.0.0.1:5000/api/professionals/${id}`, {
-//                 method: "DELETE",
-//                 headers: {
-//                     "Authentication-Token": localStorage.getItem("auth_token")
-//                 }
-//             })
-//             .then(response => response.json())
-//             .then(() => {
-//                 console.log("Professional deleted");
-//                 this.loadProfessionals();
-//             })
-//             .catch(error => console.error("Error deleting professional:", error));
-//         }
-//     },
-
-
-
-//     // Load registered customers
-//     loadCustomers() {
-//         fetch("http://127.0.0.1:5000/api/customers", {
-//             method: "GET",
-//             headers: {
-//                 "Content-Type": "application/json",
-//                 "Authentication-Token": localStorage.getItem("auth_token")
-//             }
-//         })
-//         .then(response => {
-//             console.log("Customer API Response:", response);
-//             return response.json();
-//         })
-//         .then(data => this.customers = data)
-//         .catch(error => console.error("Error fetching customers:", error))},
-        
-//     //     fetch("http://127.0.0.1:5000/api/customers", {
-//     //         method: "GET",
-//     //         headers: {
-//     //             "Content-Type": "application/json",
-//     //             "Authentication-Token": localStorage.getItem("auth_token")
-//     //         }
-//     //     })
-//     //     .then(response => response.json())
-//     //     .then(data => this.customers = data)
-//     //     .catch(error => console.error("Error fetching customers:", error));
-//     // },
-
-//     // Load service requests made by customers
-//     loadServiceRequests() {
-//         fetch("http://127.0.0.1:5000/api/service-requests", {
-//             method: "GET",
-//             headers: {
-//                 "Content-Type": "application/json",
-//                 "Authentication-Token": localStorage.getItem("auth_token")
-//             }
-//         })
-//         .then(response => response.json())
-//         .then(data => this.serviceRequests = data)
-//         .catch(error => console.error("Error fetching service requests:", error));
-//     },
-
-//     // Close the service form modal
-    // closeServiceForm() ;{
-    //     this.showServiceForm = false;
-    //     this.editingService = false;
-    //     this.newService = { name: '', base_price: '', time_required: '', description: '' }
-    // }
-// }
 

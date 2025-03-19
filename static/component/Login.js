@@ -35,39 +35,146 @@ export default {
         };
     },
 
-    methods: {
-        loginUser() {
-            fetch('/api/login', {
-                method: 'POST',
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(this.formData)
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data["auth-token"]) {
-                    localStorage.setItem("auth_token", data["auth-token"]);
-                    localStorage.setItem("id", data.id);
-                    localStorage.setItem("username", data.username);
-                    localStorage.setItem("role", data.role);
+//     methods: {
+//         loginUser() {
+//             fetch('/api/login', {
+//                 method: 'POST',
+//                 headers: { "Content-Type": "application/json" },
+//                 body: JSON.stringify(this.formData)
+//             })
+//             .then(response => response.json())
+//             .then(data => {
+//                 if (data["auth-token"]) {
+//                     localStorage.setItem("auth_token", data["auth-token"]);
+//                     localStorage.setItem("id", data.id);
+//                     localStorage.setItem("username", data.username);
+//                     localStorage.setItem("role", data.role);
     
-                    // Determine redirect path based on role
-                    let redirectPath = "/";
-                    if (data.role === "admin") {
-                        redirectPath = "/admin";
-                    } else if (data.role === "professional") {
-                        redirectPath = "/professional/dashboard";
-                    } else if (data.role === "customer") {
-                        redirectPath = "/customer/dashboard";
+//                     // Determine redirect path based on role
+//                     let redirectPath = "/";
+//                     if (data.role === "admin") {
+//                         redirectPath = "/admin";
+//                     } else if (data.role === "professional") {
+//                         redirectPath = "/professional/dashboard";
+//                     } else if (data.role === "customer") {
+//                         redirectPath = "/customer/dashboard";
+//                     }
+    
+//                     this.$router.push(redirectPath);
+//                 } else {
+//                     this.message = data.message;
+//                 }
+//             })
+//             .catch(() => {
+//                 this.message = "Login failed. Please try again.";
+//             });
+//         }
+//     }
+// }
+// methods: {
+//     loginUser() {
+//         fetch('/api/login', {
+//             method: 'POST',
+//             headers: { "Content-Type": "application/json" },
+//             body: JSON.stringify(this.formData)
+//         })
+//         .then(response => response.json())
+        
+        
+//         .then(data => {
+//             if (data["auth-token"]) {
+//                 // Check user status before proceeding
+//                 if (data.role === "customer" || data.role === "professional") {
+//                     if (data.status === "inactive") {
+//                         this.message = "⏳ Waiting for admin approval.";
+//                         return;
+//                     } else if (data.status === "blocked") {
+//                         this.message = "❌ Your account has been blocked by the admin.";
+//                         return;
+//                     }
+//                 }
+
+//                 // Store authentication details
+//                 localStorage.setItem("auth_token", data["auth-token"]);
+//                 localStorage.setItem("id", data.id);
+//                 localStorage.setItem("username", data.username);
+//                 localStorage.setItem("role", data.role);
+
+//                 // Redirect based on role
+//                 let redirectPath = "/";
+//                 if (data.role === "admin") {
+//                     redirectPath = "/admin";
+//                 } else if (data.role === "professional") {
+//                     redirectPath = "/professional/dashboard";
+//                 } else if (data.role === "customer") {
+//                     redirectPath = "/customer/dashboard";
+//                 }
+
+//                 this.$router.push(redirectPath);
+//             } else {
+//                 this.message = data.message;
+//             }
+//         })
+//         .catch(() => {
+//             this.message = "Login failed. Please try again.";
+//         });
+//     }
+// }
+// }
+methods: {
+    loginUser() {
+        fetch('/api/login', {
+            method: 'POST',
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(this.formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log("🔹 Login API Response:", data); // Debugging
+
+            if (data["auth-token"]) {
+                // Check if status is received correctly
+                if (data.role === "customer" || data.role === "professional") {
+                    if (!data.status) {
+                        console.error("❌ Status missing in API response!");
+                        this.message = "An error occurred. Please try again.";
+                        return;
                     }
-    
-                    this.$router.push(redirectPath);
-                } else {
-                    this.message = data.message;
+
+                    if (data.status === "inactive") {
+                        this.message = "⏳ Waiting for admin approval.";
+                        return;
+                    } else if (data.status === "blocked") {
+                        this.message = "❌ Your account has been blocked by the admin.";
+                        return;
+                    }
                 }
-            })
-            .catch(() => {
-                this.message = "Login failed. Please try again.";
-            });
-        }
+
+                // Store authentication details
+                localStorage.setItem("auth_token", data["auth-token"]);
+                localStorage.setItem("id", data.id);
+                localStorage.setItem("username", data.username);
+                localStorage.setItem("role", data.role);
+                localStorage.setItem("status", data.status);  // Store status for later use
+
+                // Redirect based on role
+                let redirectPath = "/";
+                if (data.role === "admin") {
+                    redirectPath = "/admin";
+                } else if (data.role === "professional") {
+                    redirectPath = "/professional/dashboard";
+                } else if (data.role === "customer") {
+                    redirectPath = "/customer/dashboard";
+                }
+
+                this.$router.push(redirectPath);
+            } else {
+                this.message = data.message;
+            }
+        })
+        .catch(() => {
+            this.message = "Login failed. Please try again.";
+        });
     }
+}
 }

@@ -472,6 +472,120 @@ export default {
 //         }
 //     })
 //     .catch(error => console.error("❌ Error submitting review:", error));}
+// async submitReview() {
+//     if (!this.userRating || !this.userRemark) {
+//         alert("⚠️ Please provide both a rating and a remark!");
+//         return;
+//     }
+
+//     try {
+//         const res = await fetch(`/api/customer/service_history/${this.selectedHistory.id}/review`, {
+//             method: "POST",
+//             headers: {
+//                 "Content-Type": "application/json",
+//                 "Authentication-Token": localStorage.getItem("auth_token")
+//             },
+//             body: JSON.stringify({
+//                 rating: this.userRating,
+//                 remark: this.userRemark
+//             })
+//         });
+
+//         const data = await res.json();
+//         console.log("🔍 Server Response:", data);
+
+//         if (res.ok) {
+//             console.log("✅ Review submitted successfully!");
+//             this.showReviewModal = false;
+//             this.fetchServiceHistory(this.userData.customer_id);  // ✅ Refresh without reload
+//         } else {
+//             console.warn("⚠️ Unexpected response:", data.message || "Unknown error");
+//         }
+
+//     } catch (error) {
+//         console.error("❌ Error submitting review:", error);
+//     }
+// }
+// async submitReview() {
+//     if (!this.userRating || !this.userRemark) {
+//         alert("⚠️ Please provide both a rating and a remark!");
+//         return;
+//     }
+
+//     try {
+//         const res = await fetch(`/api/customer/service_history/${this.selectedHistory.id}/review`, {
+//             method: "POST",
+//             headers: {
+//                 "Content-Type": "application/json",
+//                 "Authentication-Token": localStorage.getItem("auth_token")
+//             },
+//             body: JSON.stringify({
+//                 rating: this.userRating,
+//                 remark: this.userRemark
+//             })
+//         });
+
+//         const data = await res.json();
+//         console.log("🔍 Server Response:", data);
+
+//         if (res.ok) {
+//             console.log("✅ Review submitted successfully!");
+
+//             // ✅ Update the selected history item in the table dynamically
+//             this.selectedHistory.rating = this.userRating;
+//             this.selectedHistory.remarks = this.userRemark;
+//             this.selectedHistory.status = "Closed";  // ✅ Update status instantly
+
+//             // ✅ Close the modal
+//             this.showReviewModal = false;
+//         } else {
+//             console.warn("⚠️ Unexpected response:", data.message || "Unknown error");
+//         }
+
+//     } catch (error) {
+//         console.error("❌ Error submitting review:", error);
+//     }
+// }
+// async submitReview() {
+//     if (!this.userRating || !this.userRemark) {
+//         alert("⚠️ Please provide both a rating and a remark!");
+//         return;
+//     }
+
+//     try {
+//         const res = await fetch(`/api/customer/service_history/${this.selectedHistory.id}/review`, {
+//             method: "POST",
+//             headers: {
+//                 "Content-Type": "application/json",
+//                 "Authentication-Token": localStorage.getItem("auth_token")
+//             },
+//             body: JSON.stringify({
+//                 rating: this.userRating,
+//                 remark: this.userRemark
+//             })
+//         });
+
+//         const data = await res.json();
+//         console.log("🔍 Server Response:", data);
+
+//         if (res.ok) {
+//             console.log("✅ Review submitted successfully!");
+
+//             // ✅ Directly update the UI (no need to re-fetch)
+//             this.selectedHistory.rating = this.userRating;
+//             this.selectedHistory.remarks = this.userRemark;
+//             this.selectedHistory.status = "Closed";  // ✅ Mark as Closed
+
+//             // ✅ Close the modal
+//             this.showReviewModal = false;
+//         } else {
+//             console.warn("⚠️ Unexpected response:", data.message || "Unknown error");
+//         }
+
+//     } catch (error) {
+//         console.error("❌ Error submitting review:", error);
+//     }
+// }
 async submitReview() {
     if (!this.userRating || !this.userRemark) {
         alert("⚠️ Please provide both a rating and a remark!");
@@ -487,7 +601,7 @@ async submitReview() {
             },
             body: JSON.stringify({
                 rating: this.userRating,
-                remark: this.userRemark
+                remark: this.userRemark  // ✅ Ensure "remark" is sent
             })
         });
 
@@ -496,8 +610,17 @@ async submitReview() {
 
         if (res.ok) {
             console.log("✅ Review submitted successfully!");
+
+            // ✅ Directly update the UI
+            this.selectedHistory.rating = this.userRating;
+            this.selectedHistory.remarks = this.userRemark;
+            this.selectedHistory.status = "Closed";  // ✅ Mark as Closed
+
+            // ✅ Fetch latest service history from DB
+            await this.fetchServiceHistory(this.userData.customer_id);  
+
+            // ✅ Close the modal
             this.showReviewModal = false;
-            this.fetchServiceHistory(this.userData.customer_id);  // ✅ Refresh without reload
         } else {
             console.warn("⚠️ Unexpected response:", data.message || "Unknown error");
         }

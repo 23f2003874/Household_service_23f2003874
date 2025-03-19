@@ -29,13 +29,102 @@ def login():
     auth_token = user.get_auth_token()
     role = user.roles[0].name if user.roles else "customer"
 
+    # Fetch status based on user type
+    status = None
+    if role == "customer":
+        customer = Customer.query.filter_by(user_id=user.id).first()
+        status = customer.status if customer else None
+    elif role == "professional":
+        professional = ServiceProfessional.query.filter_by(user_id=user.id).first()
+        status = professional.status if professional else None
+
+    print(f"✅ Login Response: User={user.username}, Role={role}, Status={status}")  # Debugging
+
     return jsonify({
         "auth-token": auth_token,
         "id": user.id,
         "username": user.username,
-        "role": role
+        "role": role,
+        "status": status  # ✅ Include status in response
     })
 
+# @app.route("/api/login", methods=["POST"])
+# def login():
+#     data = request.json
+#     email = data.get("email")
+#     password = data.get("password")
+
+#     user = User.query.filter_by(email=email).first()
+#     if not user or not check_password_hash(user.password, password):
+#         return jsonify({"message": "Invalid email or password"}), 401
+
+#     login_user(user)
+#     auth_token = user.get_auth_token()
+#     role = user.roles[0].name if user.roles else "customer"
+
+#     return jsonify({
+#         "auth-token": auth_token,
+#         "id": user.id,
+#         "username": user.username,
+#         "role": role
+#     })
+# @app.route("/api/login", methods=["POST"])
+# def login():
+#     data = request.json
+#     user = User.query.filter_by(email=data["email"]).first()
+
+#     if user and check_password_hash(user.password, data["password"]):
+#         role = user.roles
+#         status = None
+
+#         if role == "customer":
+#             customer = Customer.query.filter_by(user_id=user.id).first()
+#             status = customer.status if customer else "inactive"
+
+#         elif role == "professional":
+#             professional = ServiceProfessional.query.filter_by(user_id=user.id).first()
+#             status = professional.status if professional else "inactive"
+
+#         auth_token = user.get_auth_token()
+#         return jsonify({
+#             "auth-token": auth_token,
+#             "id": user.id,
+#             "username": user.username,
+#             "role": role,
+#             "status": status
+#         })
+
+#     return jsonify({"message": "Invalid credentials"}), 401
+
+
+# @app.route("/api/login", methods=["POST"])
+# def login():
+#     data = request.json
+#     user = User.query.filter_by(email=data["email"]).first()
+
+#     if user and check_password_hash(user.password, data["password"]):
+#         # Extract role names from Role objects
+#         role = user.roles[0].name if user.roles else None
+#         status = None
+
+#         if role == "customer":
+#             customer = Customer.query.filter_by(user_id=user.id).first()
+#             status = customer.status if customer else "inactive"
+
+#         elif role == "professional":
+#             professional = ServiceProfessional.query.filter_by(user_id=user.id).first()
+#             status = professional.status if professional else "inactive"
+
+#         auth_token = user.get_auth_token()
+#         return jsonify({
+#             "auth-token": auth_token,
+#             "id": user.id,
+#             "username": user.username,
+#             "role": role,
+#             "status": status
+#         })
+
+#     return jsonify({"message": "Invalid credentials"}), 401
 
 
 # ====================== Customer Registration ======================
@@ -321,7 +410,7 @@ def professional_dashboard():
             "status": service.service_status,
             "date_of_request": service.date_of_request.strftime("%Y-%m-%d"),
             "date_of_completion": service.date_of_completion.strftime("%Y-%m-%d") if service.date_of_completion else None,
-            "review": service.remarks,
+            "remarks": service.remarks,
             "rating": service.rating
         } for service in service_history]
     })
@@ -1354,35 +1443,55 @@ def get_service_history(customer_id):
 # #         for service in services
 #     ]
 #     return jsonify(service_list)
+# @app.route("/api/customer/service_history/<int:service_id>/review", methods=["POST"])
+# @auth_required("token")
+# def submit_service_review(service_id):
+#     data = request.get_json()
+    
+#     rating = data.get("rating")
+#     remark = data.get("remark")
+
+#     if not rating or not remark:
+#         return jsonify({"error": "Rating and remark are required"}), 400
+
+#     service_request = ServiceRequest.query.get(service_id)
+
+#     if not service_request:
+#         return jsonify({"error": "Service request not found"}), 404
+
+#     # if service_request.service_status == "closed":
+#     #     return jsonify({"message": "Service request is already closed with review!"})
+
+#     # Update service request
+#     service_request.rating = rating
+#     service_request.remark = remark
+#     service_request.service_status = "closed"
+#     service_request.date_of_completion = datetime.utcnow()
+
+#     db.session.commit()
+
+#     return jsonify({"message": "Service request closed with review!"})
+
 @app.route("/api/customer/service_history/<int:service_id>/review", methods=["POST"])
 @auth_required("token")
-def submit_service_review(service_id):
-    data = request.get_json()
-    
+def submit_review(service_id):
+    data = request.json
     rating = data.get("rating")
-    remark = data.get("remark")
+    remark = data.get("remark")  # ✅ Ensure we capture "remark"
 
-    if not rating or not remark:
-        return jsonify({"error": "Rating and remark are required"}), 400
+    service = ServiceRequest.query.get(service_id)
+    if not service:
+        return jsonify({"message": "Service history not found"}), 404
 
-    service_request = ServiceRequest.query.get(service_id)
-
-    if not service_request:
-        return jsonify({"error": "Service request not found"}), 404
-
-    if service_request.service_status == "closed":
-        return jsonify({"message": "Service request is already closed with review!"})
-
-    # Update service request
-    service_request.rating = rating
-    service_request.remark = remark
-    service_request.service_status = "closed"
-    service_request.date_of_completion = datetime.utcnow()
-
+    # ✅ Update rating & remark
+    service.rating = rating
+    service.remarks = remark  # ✅ Save remark in DB
+    service.status = "Closed"  # ✅ Ensure status is updated
+    service.date_of_completion = datetime.utcnow()
     db.session.commit()
+    print(f"✅ Review Updated: Service ID={service_id}, Rating={rating}, Remarks={remark}")
 
-    return jsonify({"message": "Service request closed with review!"})
-
+    return jsonify({"message": "Review submitted successfully!"})
 
 
 # @app.route("/api/customer/book_service", methods=["POST"])

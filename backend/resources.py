@@ -131,33 +131,54 @@ class CustomerAPI(Resource):
             db.session.rollback()
             return {"message": f"Error deleting customer: {str(e)}"}, 400
 
-        
     @auth_required("token")
     @roles_required("admin")
-    def patch(self, customer_id):
-        """Toggle block/unblock customer (active/inactive status)"""
-        customer = Customer.query.get(customer_id)
+    def put(self, id):
+        customer = Customer.query.get(id)
         if not customer:
-            return {"message": f"Customer with ID {customer_id} not found"}, 404
+            return {"message": "Customer not found"}, 404
+        
+        data = request.get_json()
+        status = data.get("status")
+        
+        if status not in ['active', 'blocked']:
+            return {"message": "Invalid status"}, 400
 
         try:
-            # Toggle block/unblock
-            if customer.status == "active":
-                customer.status = "inactive"
-                customer.is_blocked = True
-            else:
-                customer.status = "active"
-                customer.is_blocked = False
-
+            customer.status = status
             db.session.commit()
-            return {
-                "message": f"Customer {'blocked' if customer.is_blocked else 'unblocked'} successfully!",
-                "status": customer.status,
-                "is_blocked": customer.is_blocked
-            }, 200
+            return {"message": f"Customer status updated to {status}"}, 200
         except Exception as e:
             db.session.rollback()
             return {"message": f"Error updating customer status: {str(e)}"}, 400
+        
+
+    # @auth_required("token")
+    # @roles_required("admin")
+    # def patch(self, customer_id):
+    #     """Toggle block/unblock customer (active/inactive status)"""
+    #     customer = Customer.query.get(customer_id)
+    #     if not customer:
+    #         return {"message": f"Customer with ID {customer_id} not found"}, 404
+
+    #     try:
+    #         # Toggle block/unblock
+    #         if customer.status == "active":
+    #             customer.status = "inactive"
+    #             customer.is_blocked = True
+    #         else:
+    #             customer.status = "active"
+    #             customer.is_blocked = False
+
+    #         db.session.commit()
+    #         return {
+    #             "message": f"Customer {'blocked' if customer.is_blocked else 'unblocked'} successfully!",
+    #             "status": customer.status,
+    #             "is_blocked": customer.is_blocked
+    #         }, 200
+    #     except Exception as e:
+    #         db.session.rollback()
+    #         return {"message": f"Error updating customer status: {str(e)}"}, 400
 
 
 
@@ -268,6 +289,31 @@ class ServiceAPI(Resource):
 
 
 # ========================= Professional API =========================
+# class ProfessionalAPI(Resource):
+#     @auth_required("token")
+#     @roles_required("admin")
+#     def get(self):
+#         professionals = ServiceProfessional.query.all()
+#         if not professionals:
+#             return {"message": "No professionals found"}, 404
+
+#         return [{
+#             "id": p.id,
+#             "user_id": p.user.id if p.user else None,
+#             "username": p.user.username if p.user else "⚠ Not Found",
+#             "email": p.user.email if p.user else "⚠ Not Found",
+#             "phone_number": p.phone_number,
+#             "address": p.address,
+#             "pin_code": p.pin_code,
+#             "service_id": p.service_id,
+#             # "service_name": p.service.name if p.services else "Unknown",
+#             "experience": p.experience,
+#             "verified": p.verified,
+#             "status": p.status,
+#             "rating": p.rating
+#         } for p in professionals], 200
+from sqlalchemy import func
+
 class ProfessionalAPI(Resource):
     @auth_required("token")
     @roles_required("admin")
@@ -276,21 +322,29 @@ class ProfessionalAPI(Resource):
         if not professionals:
             return {"message": "No professionals found"}, 404
 
-        return [{
-            "id": p.id,
-            "user_id": p.user.id if p.user else None,
-            "username": p.user.username if p.user else "⚠ Not Found",
-            "email": p.user.email if p.user else "⚠ Not Found",
-            "phone_number": p.phone_number,
-            "address": p.address,
-            "pin_code": p.pin_code,
-            "service_id": p.service_id,
-            # "service_name": p.service.name if p.services else "Unknown",
-            "experience": p.experience,
-            "verified": p.verified,
-            "status": p.status,
-            "rating": p.rating
-        } for p in professionals], 200
+        professional_list = []
+        for p in professionals:
+            # ✅ Compute average rating from service history
+            avg_rating = db.session.query(func.avg(ServiceRequest.rating)).filter_by(professional_id=p.id).scalar()
+            avg_rating = round(avg_rating, 1) if avg_rating else None  # Round to 1 decimal
+
+            professional_list.append({
+                "id": p.id,
+                "user_id": p.user.id if p.user else None,
+                "username": p.user.username if p.user else "⚠ Not Found",
+                "email": p.user.email if p.user else "⚠ Not Found",
+                "phone_number": p.phone_number,
+                "address": p.address,
+                "pin_code": p.pin_code,
+                "service_id": p.service_id,
+                # "service_name": p.service.name if p.services else "Unknown",
+                "experience": p.experience,
+                "verified": p.verified,
+                "status": p.status,
+                "rating": avg_rating  # ✅ Use calculated average rating
+            })
+
+        return professional_list, 200
 
     @auth_required("token")
     @roles_required("admin")
@@ -554,7 +608,7 @@ class ServiceRequestAPI(Resource):
 
 # ========================= Register API Resources =========================
 
-api.add_resource(CustomerAPI, "/api/customers", "/api/customers/<int:customer_id>")
+api.add_resource(CustomerAPI, "/api/customers", "/api/customers/<int:customer_id>","/api/customers/<int:id>/status")
 
 # api.add_resource(ServiceAPI, "/api/services")
 api.add_resource(ServiceAPI, "/api/services", "/api/services/<int:service_id>")
