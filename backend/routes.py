@@ -1309,29 +1309,64 @@ def update_service_date(customer_id, service_id):
         return jsonify({"error": f"Error updating date: {str(e)}"}), 500
 
 
+# @app.route("/api/customer/<int:customer_id>/service_history", methods=["GET"])
+# @auth_required("token")
+# def get_service_history(customer_id):
+#     print(f"🔍 Fetching service history for customer_id: {customer_id}")
+
+#     history = ServiceRequest.query.filter_by(customer_id=customer_id).all()
+    
+#     if not history:
+#         print("⚠️ No service history found!")
+#         return jsonify([])
+
+#     history_data = []
+#     for h in history:
+#         print(f"➡️ Service ID: {h.id}, Customer ID: {h.customer_id}, Customer Object: {h.customer}")
+
+#         # Debug customer details
+#         if h.customer:
+#             print(f"✅ Customer Exists: ID {h.customer.id}, Username: {h.customer.username}, User: {h.customer.user}")
+
+#         history_data.append({
+#             "id": h.id,
+#             "customer_id": h.customer_id,
+#             "customer_name": h.customer.user.username if h.customer and h.customer.user else "N/A",  # ✅ Fix here
+#             "service_name": h.service.name if h.service else "Unknown",
+#             "professional_id": h.professional.id if h.professional else None,
+#             "professional_username": h.professional.user.username if h.professional and h.professional.user else "N/A",
+#             "professional_email": h.professional.user.email if h.professional and h.professional.user else "N/A",
+#             "phone_no": h.professional.phone_number if h.professional else "N/A",
+#             "date_of_request": h.date_of_request,
+#             "date_of_completion": h.date_of_completion,
+#             "rating": h.rating if hasattr(h, "rating") else None,  # ✅ Ensure rating is included
+#             "remark": h.remark if hasattr(h, "remark") else None,  
+#             "status": h.service_status
+#         })
+
+#     return jsonify(history_data)
 @app.route("/api/customer/<int:customer_id>/service_history", methods=["GET"])
 @auth_required("token")
 def get_service_history(customer_id):
     print(f"🔍 Fetching service history for customer_id: {customer_id}")
 
+    db.session.commit()  # ✅ Ensure database session is up-to-date
+    db.session.flush()   # ✅ Ensure changes are reflected
+
     history = ServiceRequest.query.filter_by(customer_id=customer_id).all()
-    
+
     if not history:
         print("⚠️ No service history found!")
         return jsonify([])
 
     history_data = []
     for h in history:
-        print(f"➡️ Service ID: {h.id}, Customer ID: {h.customer_id}, Customer Object: {h.customer}")
-
-        # Debug customer details
-        if h.customer:
-            print(f"✅ Customer Exists: ID {h.customer.id}, Username: {h.customer.username}, User: {h.customer.user}")
+        print(f"➡️ Service ID: {h.id}, Status: {h.service_status}, Rating: {h.rating}, Remarks: {h.remarks}")
 
         history_data.append({
             "id": h.id,
             "customer_id": h.customer_id,
-            "customer_name": h.customer.user.username if h.customer and h.customer.user else "N/A",  # ✅ Fix here
+            "customer_name": h.customer.user.username if h.customer and h.customer.user else "N/A",
             "service_name": h.service.name if h.service else "Unknown",
             "professional_id": h.professional.id if h.professional else None,
             "professional_username": h.professional.user.username if h.professional and h.professional.user else "N/A",
@@ -1339,9 +1374,9 @@ def get_service_history(customer_id):
             "phone_no": h.professional.phone_number if h.professional else "N/A",
             "date_of_request": h.date_of_request,
             "date_of_completion": h.date_of_completion,
-            "rating": h.rating if hasattr(h, "rating") else None,  # ✅ Ensure rating is included
-            "remark": h.remark if hasattr(h, "remark") else None,  
-            "status": h.service_status
+            "rating": h.rating if hasattr(h, "rating") else None, 
+            "remark": h.remarks if hasattr(h, "remarks") else None,  # ✅ Fix: Use `remarks` instead of `remark`
+            "status": h.service_status  # ✅ Ensure updated status is fetched
         })
 
     return jsonify(history_data)
@@ -1472,26 +1507,58 @@ def get_service_history(customer_id):
 
 #     return jsonify({"message": "Service request closed with review!"})
 
+# @app.route("/api/customer/service_history/<int:service_id>/review", methods=["POST"])
+# @auth_required("token")
+# def submit_review(service_id):
+#     data = request.json
+#     rating = data.get("rating")
+#     remark = data.get("remark")  # ✅ Ensure we capture "remark"
+
+#     service = ServiceRequest.query.get(service_id)
+#     if not service:
+#         return jsonify({"message": "Service history not found"}), 404
+
+#     # ✅ Update rating & remark
+#     service.rating = rating
+#     service.remarks = remark  # ✅ Save remark in DB
+#     service.status = "closed"  # ✅ Ensure status is updated
+#     service.date_of_completion = datetime.utcnow()
+#     db.session.commit()
+#     db.session.refresh(service)  # ✅ Ensure the latest data is loaded
+
+#     print(f"✅ Review Updated: Service ID={service_id}, Rating={rating}, Remarks={remark}")
+
+#     return jsonify({"message": "Review submitted successfully!"})
 @app.route("/api/customer/service_history/<int:service_id>/review", methods=["POST"])
 @auth_required("token")
 def submit_review(service_id):
     data = request.json
     rating = data.get("rating")
-    remark = data.get("remark")  # ✅ Ensure we capture "remark"
+    remark = data.get("remark")
 
     service = ServiceRequest.query.get(service_id)
     if not service:
         return jsonify({"message": "Service history not found"}), 404
 
-    # ✅ Update rating & remark
+    # ✅ Update rating, remark, and status
     service.rating = rating
-    service.remarks = remark  # ✅ Save remark in DB
-    service.status = "Closed"  # ✅ Ensure status is updated
+    service.remarks = remark
+    service.service_status = "closed"
     service.date_of_completion = datetime.utcnow()
-    db.session.commit()
-    print(f"✅ Review Updated: Service ID={service_id}, Rating={rating}, Remarks={remark}")
 
-    return jsonify({"message": "Review submitted successfully!"})
+    db.session.flush()  # ✅ Immediately reflect changes
+    db.session.commit()
+    # db.session.refresh(service)  # ✅ Ensure fresh data is loaded
+
+    print(f"✅ Review Updated: {service.service_id}, Status={service.service_status}, Rating={service.rating}, Remarks={service.remarks}")
+
+    return jsonify({
+        "message": "Review submitted successfully!",
+        "service_id": service.service_id,
+        "status": service.service_status,  
+        "rating": service.rating,
+        "remarks": service.remarks
+    })
 
 
 # @app.route("/api/customer/book_service", methods=["POST"])
@@ -1514,6 +1581,175 @@ def submit_review(service_id):
 #     service_status="requested"  # ✅ Correct column name
 # )
 
+@app.route('/api/admin/summary', methods=['GET'])
+def get_summary():
+    summary_data = {
+        "services": db.session.query(func.count(Service.id)).scalar(),
+        "customers": db.session.query(func.count(Customer.id)).scalar(),
+        "professionals": db.session.query(func.count(ServiceProfessional.id)).scalar(),
+        "service_requests": db.session.query(func.count(ServiceRequest.id)).scalar(),
+        "request_status": {
+            "requested": db.session.query(func.count(ServiceRequest.id)).filter_by(service_status="requested").scalar(),
+            "closed": db.session.query(func.count(ServiceRequest.id)).filter_by(service_status="closed").scalar(),
+            "approved": db.session.query(func.count(ServiceRequest.id)).filter_by(service_status="approved").scalar(),
+            "rejected": db.session.query(func.count(ServiceRequest.id)).filter_by(service_status="rejected").scalar(),
+        }
+    }
+    return jsonify(summary_data)
+
+
+from flask import jsonify, request
+from sqlalchemy.sql import func
+
+# @app.route('/api/professional/<int:professional_id>/summary', methods=['GET'])
+# def get_professional_summary(professional_id):
+#     # Get count of unique customers who applied for this professional
+#     customer_count = (
+#         db.session.query(func.count(func.distinct(ServiceRequest.customer_id)))
+#         .filter(ServiceRequest.professional_id == professional_id)
+#         .scalar()
+#     )
+
+#     # Get count of service requests assigned to the professional based on status
+#     request_status = {
+#         "requested": db.session.query(func.count(ServiceRequest.id))
+#                       .filter_by(professional_id=professional_id, service_status="requested")
+#                       .scalar(),
+#         "closed": db.session.query(func.count(ServiceRequest.id))
+#                   .filter_by(professional_id=professional_id, service_status="closed")
+#                   .scalar(),
+#         "approved": db.session.query(func.count(ServiceRequest.id))
+#                     .filter_by(professional_id=professional_id, service_status="approved")
+#                     .scalar(),
+#         "rejected": db.session.query(func.count(ServiceRequest.id))
+#                     .filter_by(professional_id=professional_id, service_status="rejected")
+#                     .scalar(),
+#     }
+
+#     # Get total service requests for the professional
+#     total_requests = (
+#         db.session.query(func.count(ServiceRequest.id))
+#         .filter(ServiceRequest.professional_id == professional_id)
+#         .scalar()
+#     )
+
+#     # Get the service name offered by the professional
+#     service_name = (
+#         db.session.query(Service.name)
+#         .join(ServiceProfessional, ServiceProfessional.service_id == Service.id)
+#         .filter(ServiceProfessional.id == professional_id)
+#         .scalar()
+#     )
+
+#     # Prepare response
+#     summary_data = {
+#         "customer_count": customer_count,
+#         "request_status": request_status,
+#         "total_service_requests": total_requests,
+#         "service_name": service_name
+#     }
+
+#     return jsonify(summary_data)
+from flask import jsonify
+from sqlalchemy.sql import func
+
+@app.route('/api/professional/<int:professional_id>/summary', methods=['GET'])
+def get_professional_summary(professional_id):
+    """Returns the summary of a specific professional"""
+
+    # Count unique customers who requested services from this professional
+    customer_count = (
+        db.session.query(func.count(func.distinct(ServiceRequest.customer_id)))
+        .filter(ServiceRequest.professional_id == professional_id)
+        .scalar()
+    ) or 0  
+
+    # Count service requests assigned to this professional based on status
+    request_status = {
+        "requested": db.session.query(func.count(ServiceRequest.id))
+                      .filter(ServiceRequest.professional_id == professional_id, ServiceRequest.service_status == "requested")
+                      .scalar() or 0,
+        "closed": db.session.query(func.count(ServiceRequest.id))
+                  .filter(ServiceRequest.professional_id == professional_id, ServiceRequest.service_status == "closed")
+                  .scalar() or 0,
+        "approved": db.session.query(func.count(ServiceRequest.id))
+                    .filter(ServiceRequest.professional_id == professional_id, ServiceRequest.service_status == "approved")
+                    .scalar() or 0,
+        "rejected": db.session.query(func.count(ServiceRequest.id))
+                    .filter(ServiceRequest.professional_id == professional_id, ServiceRequest.service_status == "rejected")
+                    .scalar() or 0,
+    }
+
+    # Count total service requests assigned to this professional
+    total_requests = (
+        db.session.query(func.count(ServiceRequest.id))
+        .filter(ServiceRequest.professional_id == professional_id)
+        .scalar()
+    ) or 0  
+
+    # Get the service name assigned to this professional
+    service_name = (
+        db.session.query(Service.name)
+        .join(ServiceProfessional, ServiceProfessional.service_id == Service.id)
+        .filter(ServiceProfessional.id == professional_id)
+        .scalar()
+    ) or "N/A"  
+
+    # Return the summary data
+    summary_data = {
+        "customer_count": customer_count,
+        "request_status": request_status,
+        "total_service_requests": total_requests,
+        "service_name": service_name
+    }
+
+    return jsonify(summary_data)
+
+
+from flask import jsonify, request
+from flask_security import current_user, auth_required
+
+# @app.route('/api/auth/user', methods=['GET'])
+# @auth_required()  # Ensures only authenticated users can access
+# def get_logged_in_user():
+#     """Returns details of the currently logged-in professional"""
+#     if current_user.is_authenticated:
+#         return jsonify({
+#             "professional_id": current_user.id,
+#             "email": current_user.email,
+#             "role": current_user.roles  # Ensure professionals have a distinct role
+#         })
+#     return jsonify({"error": "Unauthorized"}), 401
+
+# @app.route('/api/auth/user', methods=['GET'])
+# @auth_required()
+# def get_logged_in_user():
+#     """Returns details of the currently logged-in professional"""
+#     if current_user.is_authenticated:
+#         roles = [role.name for role in current_user.roles]  # Extract role names
+#         return jsonify({
+#             "professional_id": current_user.professionals.id,
+#             "email": current_user.email,
+#             "roles": roles  # Send as a list of role names
+#         })
+#     return jsonify({"error": "Unauthorized"}), 401
+@app.route('/api/auth/user', methods=['GET'])
+@auth_required()
+def get_logged_in_user():
+    """Returns details of the currently logged-in professional"""
+    if current_user.is_authenticated:
+        roles = [role.name for role in current_user.roles]  # Extract role names
+
+        # Fetch the corresponding Professional ID (if user is a professional)
+        professional = ServiceProfessional.query.filter_by(user_id=current_user.id).first()
+
+        return jsonify({
+            "user_id": current_user.id,  # Authenticated User ID
+            "professional_id": professional.id if professional else None,  # Professional ID from ServiceProfessional table
+            "email": current_user.email,
+            "roles": roles
+        })
+    return jsonify({"error": "Unauthorized"}), 401
 
 #     db.session.add(new_request)
 #     db.session.commit()

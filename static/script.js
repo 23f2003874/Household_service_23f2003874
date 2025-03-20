@@ -5,6 +5,8 @@ import profesRegister from './component/profesRegister.js'
 import AdminDashboard from './component/AdminDashboard.js'
 import CustomerDashboard from './component/customer.js'
 import ProfessionalDashboard from './component/professional.js'
+import Summary from './component/summary.js'
+import profSummary from './component/profSummary.js'
 
 const routes = [
     {path: '/',component: Home},
@@ -13,8 +15,9 @@ const routes = [
     {path: '/profesregister',component:profesRegister},
     { path: '/admin', component: AdminDashboard } ,
     {path: '/customer/dashboard',component: CustomerDashboard},
-    {path: '/professional/dashboard',component: ProfessionalDashboard}
-
+    {path: '/professional/dashboard',component: ProfessionalDashboard},
+    {path: '/summary',component: Summary},
+    {path: '/profSummary',component: profSummary}
 ]
 
 const router = new VueRouter ({

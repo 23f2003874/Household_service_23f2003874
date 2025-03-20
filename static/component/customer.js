@@ -93,7 +93,7 @@ export default {
                             <td>
                             
                             <button class="btn btn-warning btn-sm" @click="openReviewModal(history)">Close</button>
-                            <button class="btn btn-danger btn-sm" @click="deleteServiceRequest(history.id)">Delete</button>
+                          <!--  <button class="btn btn-danger btn-sm" @click="deleteServiceRequest(history.id)">Delete</button>-->
 
                             <!-- Review & Rating Modal -->
                     <div v-if="showReviewModal" class="modal fade show d-block" tabindex="-1">
@@ -586,6 +586,49 @@ export default {
 //         console.error("❌ Error submitting review:", error);
 //     }
 // }
+// async submitReview() {
+//     if (!this.userRating || !this.userRemark) {
+//         alert("⚠️ Please provide both a rating and a remark!");
+//         return;
+//     }
+
+//     try {
+//         const res = await fetch(`/api/customer/service_history/${this.selectedHistory.id}/review`, {
+//             method: "POST",
+//             headers: {
+//                 "Content-Type": "application/json",
+//                 "Authentication-Token": localStorage.getItem("auth_token")
+//             },
+//             body: JSON.stringify({
+//                 rating: this.userRating,
+//                 remark: this.userRemark  // ✅ Ensure "remark" is sent
+//             })
+//         });
+
+//         const data = await res.json();
+//         console.log("🔍 Server Response:", data);
+
+//         if (res.ok) {
+//             console.log("✅ Review submitted successfully!");
+
+//             // ✅ Directly update the UI
+//             this.selectedHistory.rating = this.userRating;
+//             this.selectedHistory.remarks = this.userRemark;
+//             this.selectedHistory.status = "closed";  // ✅ Mark as Closed
+
+//             // ✅ Fetch latest service history from DB
+//             await this.fetchServiceHistory(this.userData.customer_id);  
+
+//             // ✅ Close the modal
+//             this.showReviewModal = false;
+//         } else {
+//             console.warn("⚠️ Unexpected response:", data.message || "Unknown error");
+//         }
+
+//     } catch (error) {
+//         console.error("❌ Error submitting review:", error);
+//     }
+// }
 async submitReview() {
     if (!this.userRating || !this.userRemark) {
         alert("⚠️ Please provide both a rating and a remark!");
@@ -601,7 +644,7 @@ async submitReview() {
             },
             body: JSON.stringify({
                 rating: this.userRating,
-                remark: this.userRemark  // ✅ Ensure "remark" is sent
+                remark: this.userRemark
             })
         });
 
@@ -612,12 +655,12 @@ async submitReview() {
             console.log("✅ Review submitted successfully!");
 
             // ✅ Directly update the UI
-            this.selectedHistory.rating = this.userRating;
-            this.selectedHistory.remarks = this.userRemark;
-            this.selectedHistory.status = "Closed";  // ✅ Mark as Closed
+            this.selectedHistory.rating = data.rating;
+            this.selectedHistory.remarks = data.remarks;
+            this.selectedHistory.status = data.status;  // ✅ Updated from API Response
 
-            // ✅ Fetch latest service history from DB
-            await this.fetchServiceHistory(this.userData.customer_id);  
+            // ✅ Fetch the latest service history after update
+            await this.fetchServiceHistory();
 
             // ✅ Close the modal
             this.showReviewModal = false;

@@ -12,10 +12,12 @@ export default {
                   <router-link to="/admin" class="btn btn-primary btn-lg shadow fw-bold">
                   Home
               </router-link>
-                      <li class="nav-item">
-                          <a class="nav-link" href="#">Summary</a>
-                      </li>
-                      <li class="nav-item">
+              <li class="nav-item">
+              <router-link to="/summary" class="btn btn-primary btn-lg shadow fw-bold">
+                  Summary
+              </router-link>
+          </li>
+        <li class="nav-item">
                       <li class="nav-item">
                       <input 
                           v-model="searchQuery"
@@ -40,6 +42,7 @@ export default {
       </nav>
 
       <div class="container mt-4">
+      
     <!-- Create Service Button -->
                 <button class="btn btn-primary mb-3" @click="showServiceForm = true">
                     + Create New Service
@@ -67,10 +70,10 @@ export default {
                 </div>
             </div>
                 <div class="container mt-4">
-                <div v-if="services.length">
+                <div v-if="filteredServices.length">
                     <div class="row">
-                    <h3 class="text-center">Available Services</h3>
-                        <div v-for="service in services" :key="service.id" class="col-md-4">
+                         <h3 class="text-center">Available Services</h3>
+                                 <div v-for="service in filteredServices" :key="service.id" class="col-md-4">
                             <div class="card mb-3" style="width: auto;">
                                 <div class="card-body">
                                     <h5 class="card-title">{{ service.id }}</h5>
@@ -106,7 +109,10 @@ export default {
                         </div>
                     </div>
                 </div>
-                <h3 v-else class="middle">No Services are available!</h3>
+                <p v-if="!this.searchQuery && services.length === 0">No services available!</p>
+<p v-if="this.searchQuery && filteredServices.length === 0">No matching services found!</p>
+
+
             
 
 
@@ -135,7 +141,7 @@ export default {
             <h3>Service Professionals</h3>
             <div class="container">
                 <div class="row">
-                    <div v-for="professional in professionals" :key="professional.id" class="col-md-4 mb-3">
+                <div v-for="professional in filteredProfessionals" :key="professional.id" class="col-md-4 mb-3">
                         <div class="card h-100">
                             <div class="card-body">
                                 <h5 class="card-title">{{ professional.username }}</h5>
@@ -157,12 +163,14 @@ export default {
                     </div>
                 </div>
             </div>
-            <p v-if="professionals.length === 0">No professionals available.</p>
+            <p v-if="!this.searchQuery && professionals.length === 0">No professionals available!</p>
+            <p v-if="this.searchQuery && filteredProfessionals.length === 0">No matching professionals found!</p>
+            
 
                 <h3>Customers</h3>
             <div class="container">
                 <div class="row">
-                    <div v-for="(customer, index) in customers" :key="customer.id" class="col-md-4 mb-3">
+                <div v-for="customer in filteredCustomers" :key="customer.id" class="col-md-4 mb-3">
                         <div class="card h-100">
                             <div class="card-body">
                                 <h5 class="card-title">{{ customer.username }}</h5>
@@ -181,11 +189,14 @@ export default {
                     </div>
                 </div>
             </div>
-            <p v-if="customers.length === 0" class="text-center mt-3">No customers available.</p>
+            <p v-if="!this.searchQuery && customers.length === 0">No customers available!</p>
+            <p v-if="this.searchQuery && filteredCustomers.length === 0">No matching customers found!</p>
+            
+
 
 <h3>Service Requests</h3>
 <div class="row">
-    <div v-for="request in serviceRequests" :key="request.id" class="col-md-4">
+<div v-for="request in filteredServiceRequests" :key="request.id" class="col-md-4">
         <div class="card mb-3">
             <div class="card-body">
                 <h5 class="card-title">Service: {{ request.service_name }}</h5>
@@ -200,8 +211,8 @@ export default {
         </div>
     </div>
 </div>
-<p v-if="serviceRequests.length === 0">No service requests available.</p>
-
+<p v-if="!this.searchQuery && serviceRequests.length === 0">No service requests available!</p>
+<p v-if="this.searchQuery && filteredServiceRequests.length === 0">No matching service requests found!</p>
 </div>
 </div>
 </div>
@@ -430,20 +441,59 @@ updateCustomerStatus(customer) {
     
   }
         
-,
-  computed: {
-    filteredCustomers() {
-      return this.customers.filter(customer => customer.username.toLowerCase().includes(this.searchQuery.toLowerCase()));
-    },
-    filteredProfessionals() {
-      return this.professionals.filter(professional => professional.username.toLowerCase().includes(this.searchQuery.toLowerCase()));
-    },
+, goToSummary() {
+    this.$router.push("/api/admin/summary");
+  },
+computed: {
     filteredServices() {
-      return this.services.filter(service => service.name.toLowerCase().includes(this.searchQuery.toLowerCase()));
+        if (!this.searchQuery) return this.services || [];
+
+        const query = this.searchQuery.toLowerCase();
+        return (this.services || []).filter(service =>
+            (service.name || "").toLowerCase().includes(query) ||
+            (service.base_price && service.base_price.toString().includes(query)) ||
+            (service.time_required && service.time_required.toString().includes(query)) ||
+            (service.description || "").toLowerCase().includes(query)
+        );
     },
+
+    filteredProfessionals() {
+        if (!this.searchQuery) return this.professionals || [];
+
+        const query = this.searchQuery.toLowerCase();
+        return (this.professionals || []).filter(professional =>
+            (professional.username || "").toLowerCase().includes(query) ||
+            (professional.email || "").toLowerCase().includes(query) ||
+            (professional.address || "").toLowerCase().includes(query) ||
+            (professional.status || "").toLowerCase().includes(query)
+        );
+    },
+
+    filteredCustomers() {
+        if (!this.searchQuery) return this.customers || [];
+
+        const query = this.searchQuery.toLowerCase();
+        return (this.customers || []).filter(customer =>
+            (customer.username || "").toLowerCase().includes(query) ||
+            (customer.email || "").toLowerCase().includes(query) ||
+            (customer.address || "").toLowerCase().includes(query) ||
+            (customer.status || "").toLowerCase().includes(query)
+        );
+    },
+
     filteredServiceRequests() {
-      return this.serviceRequests.filter(request => request.service_name.toLowerCase().includes(this.searchQuery.toLowerCase()));
+        if (!this.searchQuery) return this.serviceRequests || [];
+
+        const query = this.searchQuery.toLowerCase();
+        return (this.serviceRequests || []).filter(request =>
+            (request.service_name || "").toLowerCase().includes(query) ||
+            (request.customer_name || "").toLowerCase().includes(query) ||
+            (request.professional_name || "").toLowerCase().includes(query) ||
+            (request.service_status || "").toLowerCase().includes(query)
+        );
     }
-  }
+
+
 }
 
+}

@@ -422,7 +422,9 @@ export default {
                     <ul class="navbar-nav">
                         <router-link to="/professional/dashboard" class="btn btn-primary btn-lg shadow fw-bold">Home</router-link>
                         <li class="nav-item">
-                            <a class="nav-link" href="#" @click.prevent="goSummary">Summary</a>
+                        <router-link to="/profSummary" class="btn btn-primary btn-lg shadow fw-bold">
+                  Summary
+              </router-link>
                         </li>
                         <li class="nav-item">
                             <input 
@@ -449,7 +451,7 @@ export default {
         
         <div id="dashboard">
     <h4>Today's Services</h4>
-    <table v-if="todayServices.length" class="table table-striped">
+    <table v-if="filteredTodayServices.length" class="table table-striped">
         <thead>
             <tr>
                 <th>ID</th>
@@ -461,7 +463,7 @@ export default {
             </tr>
         </thead>
         <tbody>
-            <tr v-for="service in todayServices" :key="service.service_id">
+        <tr v-for="service in filteredTodayServices" :key="service.service_id">
                 <td>{{ service.service_id }}</td>
                 <td>{{ service.customer_name }}</td>
                 <td>{{ service.phone_number }}</td>
@@ -477,7 +479,7 @@ export default {
     <p v-else>No service requests for today.</p>
 
     <h4 class="mt-4">Service History</h4>
-    <table v-if="serviceHistory.length" class="table table-striped">
+    <table v-if="filteredServiceHistory.length" class="table table-striped">
         <thead>
             <tr>
                 <th>ID</th>
@@ -491,7 +493,7 @@ export default {
             </tr>
         </thead>
         <tbody>
-            <tr v-for="service in serviceHistory" :key="service.service_id">
+        <tr v-for="service in filteredServiceHistory" :key="service.service_id">
                 <td>{{ service.service_id }}</td>
                 <td>{{ service.customer_name }}</td>
                 <td>{{ service.address }}</td>
@@ -526,30 +528,30 @@ export default {
         };
     },
     computed: {
-        filteredServiceRequests() {
-            return (this.serviceRequests || []).filter(request => {  // 👈 Prevents errors if `serviceRequests` is empty
-                return (
-                    request.customer?.username?.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-                    request.customer?.address?.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-                    request.customer?.pin_code?.toString().includes(this.searchQuery) ||
-                    request.status?.toLowerCase().includes(this.searchQuery.toLowerCase())
-                );
-            });
+        filteredTodayServices() {
+            if (!this.searchQuery) return this.todayServices || [];
+
+            const query = this.searchQuery.toLowerCase();
+            return (this.todayServices || []).filter(service =>
+                (service.status || "").toLowerCase().includes(query) ||
+                (service.customer_name || "").toLowerCase().includes(query) ||
+                (service.pincode || "").includes(query) ||
+                (service.date_of_request || "").includes(query)
+            );
         },
         filteredServiceHistory() {
-            return (this.serviceHistory || []).filter(history => {  // 👈 Prevents errors if `serviceHistory` is empty
-                return (
-                    history.customer?.username?.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-                    history.customer?.address?.toLowerCase().includes(this.searchQuery.toLowerCase()) ||
-                    history.customer?.pin_code?.toString().includes(this.searchQuery) ||
-                    history.date_of_completion?.toString().includes(this.searchQuery)
-                );
-            });
+            if (!this.searchQuery) return this.serviceHistory || [];
+
+            const query = this.searchQuery.toLowerCase();
+            return (this.serviceHistory || []).filter(service =>
+                (service.status || "").toLowerCase().includes(query) ||
+                (service.customer_name || "").toLowerCase().includes(query) ||
+                (service.pincode || "").includes(query) ||
+                (service.date_of_request || "").includes(query) ||
+                (service.date_of_completion || "").includes(query)
+            );
         }
-    }
-    
-    
-,    
+    },
     
         
         // filteredServiceHistory() {

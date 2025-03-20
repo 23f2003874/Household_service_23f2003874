@@ -29,6 +29,8 @@ class User(db.Model, UserMixin):
     fs_uniquifier = db.Column(db.String, unique=True, nullable=False)
 
     roles = db.relationship('Role', secondary=roles_users, backref=db.backref('users', lazy='dynamic'))
+    customers = db.relationship("Customer", backref="user", cascade="all, delete-orphan", passive_deletes=True)
+    professionals = db.relationship("ServiceProfessional", backref="user", cascade="all, delete-orphan", passive_deletes=True)
     # created_at = db.Column(db.Date, default=dt.utcnow().date, nullable=False)  # Stores only YYYY-MM-DD
 
 # Service Table
@@ -50,7 +52,7 @@ class ServiceProfessional(db.Model):
     username = db.Column(db.String(50), unique=False, nullable=False)
     email = db.Column(db.String(100), unique=True, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id",ondelete="CASCADE"), unique=True, nullable=False)
-    service_id = db.Column(db.Integer, db.ForeignKey("services.id"), nullable=False)
+    service_id = db.Column(db.Integer, db.ForeignKey("services.id", ondelete="CASCADE"), nullable=False)
     phone_number = db.Column(db.String(15), nullable=True)
     address = db.Column(db.Text, nullable=True)
     pin_code = db.Column(db.String(10), nullable=True)
@@ -61,8 +63,7 @@ class ServiceProfessional(db.Model):
     created_at = db.Column(db.Date, default=dt.utcnow().date, nullable=False)  # Stores only YYYY-MM-DD
 
     # Relationships
-    user = db.relationship("User", backref="service_professional", uselist=False)
-
+    
 # Customer Table
 class Customer(db.Model):
     __tablename__ = "customers"
@@ -77,7 +78,8 @@ class Customer(db.Model):
     created_at = db.Column(db.Date, default=dt.utcnow().date, nullable=False)  # Stores only YYYY-MM-DD
 
     # Relationships
-    user = db.relationship("User", backref="customer", uselist=False)
+    
+    
     
 
 
@@ -85,7 +87,7 @@ class Customer(db.Model):
 class ServiceRequest(db.Model):
     __tablename__ = "service_requests"
     id = db.Column(db.Integer, primary_key=True)
-    service_id = db.Column(db.Integer, db.ForeignKey("services.id"), nullable=False)
+    service_id = db.Column(db.Integer,db.ForeignKey("services.id", ondelete="CASCADE"), nullable=False)
     customer_id = db.Column(db.Integer, db.ForeignKey("customers.id", ondelete="CASCADE"), nullable=False)  # Change
     professional_id = db.Column(db.Integer, db.ForeignKey("service_professionals.id", ondelete="CASCADE"), nullable=False)  # Change
     date_of_request = db.Column(db.Date, default=dt.utcnow().date, nullable=False)

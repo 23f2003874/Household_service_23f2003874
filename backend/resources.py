@@ -117,19 +117,45 @@ class CustomerAPI(Resource):
     @auth_required("token")
     @roles_required("admin")
     def delete(self, customer_id):
-        customer = Customer.query.get(id)
+        customer = Customer.query.get(customer_id)
+        
         if not customer:
             return {"message": f"Customer with ID {customer_id} not found"}, 404
         
+        user = User.query.get(customer.user_id)  # Fetch related user
+        
         try:
-            for service_request in customer.service_requests:
-                db.session.delete(service_request)
+            # Delete related service requests
+            ServiceRequest.query.filter_by(customer_id=customer_id).delete()
+
+            # Delete customer
             db.session.delete(customer)
+
+            # Delete the associated user
+            if user:
+                db.session.delete(user)
+
             db.session.commit()
-            return {"message": "Customer deleted successfully!"}, 200
+            return {"message": "Customer and associated user deleted successfully!"}, 200
         except Exception as e:
             db.session.rollback()
             return {"message": f"Error deleting customer: {str(e)}"}, 400
+    # def delete(self, customer_id):
+    #     customer_id = int(customer_id)  # Ensure id is correctly passed
+    #     customer = Customer.query.get(customer_id)
+        
+    #     if not customer:
+    #         return {"message": f"Customer with ID {customer_id} not found"}, 404
+        
+    #     try:
+    #         for service_request in customer.service_requests:
+    #             db.session.delete(service_request)
+    #         db.session.delete(customer)
+    #         db.session.commit()
+    #         return {"message": "Customer deleted successfully!"}, 200
+    #     except Exception as e:
+    #         db.session.rollback()
+    #         return {"message": f"Error deleting customer: {str(e)}"}, 400
 
     @auth_required("token")
     @roles_required("admin")
@@ -263,25 +289,51 @@ class ServiceAPI(Resource):
             return {"message": f"Error updating service: {str(e)}"}, 400
 
 
-    
     @auth_required("token")
     @roles_required("admin")
     def delete(self, service_id):
         service = Service.query.get(service_id)
         if not service:
             return {"message": f"Service with ID {service_id} not found"}, 404
-        
-        try:
-            # Delete related entries in service_professionals first
-            ServiceProfessional.query.filter_by(service_id=service_id).delete()
 
-            # Now delete the actual service
+        try:
+            # Get all professionals linked to this service
+            professionals = ServiceProfessional.query.filter_by(service_id=service_id).all()
+
+            # Delete associated professionals and their users
+            for professional in professionals:
+                user = User.query.get(professional.user_id)  # Fetch associated user
+                db.session.delete(professional)
+                if user:
+                    db.session.delete(user)  # Delete user if exists
+
+            # Delete the actual service
             db.session.delete(service)
             db.session.commit()
-            return {"message": "Service deleted successfully!"}, 200
+            
+            return {"message": "Service, associated professionals, and users deleted successfully!"}, 200
         except Exception as e:
             db.session.rollback()
             return {"message": f"Error deleting service: {str(e)}"}, 400
+
+    # @auth_required("token")
+    # @roles_required("admin")
+    # def delete(self, service_id):
+    #     service = Service.query.get(service_id)
+    #     if not service:
+    #         return {"message": f"Service with ID {service_id} not found"}, 404
+        
+    #     try:
+    #         # Delete related entries in service_professionals first
+    #         ServiceProfessional.query.filter_by(service_id=service_id).delete()
+
+    #         # Now delete the actual service
+    #         db.session.delete(service)
+    #         db.session.commit()
+    #         return {"message": "Service deleted successfully!"}, 200
+    #     except Exception as e:
+    #         db.session.rollback()
+    #         return {"message": f"Error deleting service: {str(e)}"}, 400
 
 
 
@@ -392,18 +444,42 @@ class ProfessionalAPI(Resource):
     @roles_required("admin")
     def delete(self, id):
         professional = ServiceProfessional.query.get(id)
+
         if not professional:
             return {"message": f"Professional with ID {id} not found"}, 404
-        
+
+        user = User.query.get(professional.user_id)  # Fetch related user
+
         try:
             # Delete related service requests
             ServiceRequest.query.filter_by(professional_id=id).delete()
+
+            # Delete professional
             db.session.delete(professional)
+
+            # Delete the associated user
+            if user:
+                db.session.delete(user)
+
             db.session.commit()
-            return {"message": "Professional deleted successfully!"}, 200
+            return {"message": "Professional and associated user deleted successfully!"}, 200
         except Exception as e:
             db.session.rollback()
             return {"message": f"Error deleting professional: {str(e)}"}, 400
+    # def delete(self, id):
+    #     professional = ServiceProfessional.query.get(id)
+    #     if not professional:
+    #         return {"message": f"Professional with ID {id} not found"}, 404
+        
+    #     try:
+    #         # Delete related service requests
+    #         ServiceRequest.query.filter_by(professional_id=id).delete()
+    #         db.session.delete(professional)
+    #         db.session.commit()
+    #         return {"message": "Professional deleted successfully!"}, 200
+    #     except Exception as e:
+    #         db.session.rollback()
+    #         return {"message": f"Error deleting professional: {str(e)}"}, 400
 
     @auth_required("token")
     @roles_required("admin")
