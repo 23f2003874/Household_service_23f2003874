@@ -1,16 +1,18 @@
-from flask import request
+from flask import request,current_app as app    #jsonify,
 from flask_restful import Resource, Api
 from flask_security import auth_required, roles_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from backend.model import db, Service, Customer, ServiceProfessional, User,ServiceRequest,Role
 from datetime import datetime
 
+cache= app.cache
 # Initialize API independently (without app)
 api = Api()
 
 # ========================= Customer API =========================
 class CustomerAPI(Resource):
     @auth_required("token")
+    @cache.cached(timeout=5)     ###############CACHE 
     @roles_required("admin")
     def get(self):
         """Fetch all customers with full details"""
@@ -227,6 +229,7 @@ class CustomerAPI(Resource):
 #         } for s in services], 200
 class ServiceAPI(Resource):
     @auth_required("token")
+    @cache.cached(timeout=5)     ###########   CACHE
     @roles_required("admin")
     def get(self):
         services = Service.query.all()

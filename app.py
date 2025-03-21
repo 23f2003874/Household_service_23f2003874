@@ -3,20 +3,31 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_security import Security, SQLAlchemyUserDatastore
 from backend.model import db, User, Role  # Import models
 from backend.config import LocalDevelopmentConfig  # Import configuration
-from backend.resources import api
 from werkzeug.security import generate_password_hash  # Correct hashing method
+from flask_caching import Cache
+from backend.celery.celery_factory import celery_init_app 
+import flask_excel as excel 
+from celery.schedules import crontab
+from backend.celery.tasks import monthly_report
 
 def create_app():
     app = Flask(__name__)
     app.config.from_object(LocalDevelopmentConfig)  # Load configuration
     db.init_app(app)
-    api.init_app(app)
+    cache= Cache(app)
+
     datastore = SQLAlchemyUserDatastore(db, User, Role)
+    app.cache= cache 
     app.security = Security(app, datastore)
     app.app_context().push()
+    from backend.resources import api
+    api.init_app(app)
     return app
 
 app = create_app()
+
+celery_app= celery_init_app(app)
+celery_app.autodiscover_tasks()   #(['backend.celery.tasks'])  
 
 with app.app_context():
     db.create_all()
@@ -46,6 +57,22 @@ with app.app_context():
 
 # Import routes after app is created
 from backend.routes import *  
+
+# @celery.on_after_finalize.connect 
+# def setup_periodic_tasks(sender, **kwargs):
+#     sender.add_periodic_task(
+#         crontab(minute = '*/2'),
+#         monthly_report.s(),
+#     )
+@celery_app.on_after_finalize.connect
+def setup_periodic_tasks(sender, **kwargs):
+    sender.add_periodic_task(
+        crontab(minute = '*/2'),    #crontab(minute=0, hour=0, day_of_month=1),  # Runs on the 1st of every month at midnight
+        monthly_report.s(),
+    )
+
+
+excel.init_excel(app)
 
 if __name__ == "__main__":
     app.run()

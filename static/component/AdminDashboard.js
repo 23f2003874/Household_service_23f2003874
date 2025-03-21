@@ -38,6 +38,8 @@ export default {
                       Welcome, {{ adminData.username || 'Admin' }}!
                   </span>
               </div>
+              <button @click="create_csv">Export CSV</button>
+
           </div>
       </nav>
 
@@ -263,6 +265,36 @@ export default {
           .catch(error => console.error("Error fetching admin data:", error));
       },
 
+    async create_csv() {
+        // Step 1: Send request to create CSV
+        const res = await fetch(location.origin + '/create-csv', {
+            method: 'GET', // Ensure this method matches your Flask route
+            headers: {
+                "Content-Type": "application/json",
+                "Authentication-Token": localStorage.getItem("auth_token")
+            }
+        });
+    
+        // Step 2: Get task ID from response
+        const task_id = (await res.json()).task_id;
+    
+        // Step 3: Poll for CSV file completion
+        const interval = setInterval(async () => {
+            const res = await fetch(`${location.origin}/get-csv/${task_id}`, {
+                method: 'GET',
+                headers: {
+                    "Authentication-Token": localStorage.getItem("auth_token") // Include token
+                }
+            });
+    
+            if (res.ok) {
+                console.log('CSV is ready');
+                window.open(`${location.origin}/get-csv/${task_id}`, "_blank"); // Open file in new tab
+                clearInterval(interval); // Stop polling
+            }
+        }, 100); // Poll every 3 seconds instead of 100ms (to avoid excessive requests)
+    }
+,    
       loadServices() {fetch("http://127.0.0.1:5000/api/services", {
         method: "GET",
         headers: { 
@@ -439,8 +471,7 @@ updateCustomerStatus(customer) {
         }
     },
     
-  }
-        
+  } 
 , goToSummary() {
     this.$router.push("/api/admin/summary");
   },

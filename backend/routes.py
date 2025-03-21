@@ -1,4 +1,4 @@
-from flask import current_app as app, jsonify, request, render_template
+from flask import current_app as app, jsonify, request, render_template,send_file
 from flask_security import auth_required, roles_required, login_user, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from .model import db, User, Role, Service, Customer, ServiceProfessional, ServiceRequest
@@ -6,12 +6,43 @@ import uuid
 from datetime import datetime
 from datetime import date  # For handling dates
 from sqlalchemy.sql import func  # For database functions like date filtering
+from backend.celery.tasks import add,create_csv
+from celery.result import AsyncResult 
 
+cache= app.cache
 
 # ====================== Home Route ======================
 @app.route('/', methods=['GET'])
 def home():
     return render_template("index.html")
+
+
+@app.get('/celery')
+def celery():
+    task=add.delay(10,20)
+    return {'task_id':task.id}
+
+
+@auth_required('token') 
+@app.get('/get-csv/<id>')
+def getCSV(id):
+    result = AsyncResult(id)
+
+    if result.ready():
+        return send_file(f'./backend/celery/user-downloads/{result.result}'), 200
+    else:
+        return {'message' : 'task not ready'}, 405
+
+@auth_required('token') 
+@app.get('/create-csv')
+def createCSV():
+    task = create_csv.delay()
+    return {'task_id' : task.id}, 200
+#======Cache++++++======
+@app.get('/cache')
+@cache.cached(timeout=5)
+def cache():
+    return {'time': str(datetime.now())}
 
 
 # ====================== User Login ======================
