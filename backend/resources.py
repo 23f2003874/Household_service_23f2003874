@@ -222,6 +222,7 @@ class ServiceAPI(Resource):
             )
             db.session.add(new_service)
             db.session.commit()
+            #cache.delete("all_services")    or cache.clear()
             return {"message": "Service created successfully!"}, 201
         except Exception as e:
             db.session.rollback()
@@ -248,6 +249,32 @@ class ServiceAPI(Resource):
             return {"message": f"Error updating service: {str(e)}"}, 400
 
 
+    # @auth_required("token")
+    # @roles_required("admin")
+    # def delete(self, service_id):
+    #     service = Service.query.get(service_id)
+    #     if not service:
+    #         return {"message": f"Service with ID {service_id} not found"}, 404
+
+    #     try:
+    #         # Get all professionals linked to this service
+    #         professionals = ServiceProfessional.query.filter_by(service_id=service_id).all()
+
+    #         # Delete associated professionals and their users
+    #         for professional in professionals:
+    #             user = User.query.get(professional.user_id)  # Fetch associated user
+    #             db.session.delete(professional)
+    #             if user:
+    #                 db.session.delete(user)  # Delete user if exists
+
+    #         # Delete the actual service
+    #         db.session.delete(service)
+    #         db.session.commit()
+            
+    #         return {"message": "Service, associated professionals, and users deleted successfully!"}, 200
+    #     except Exception as e:
+    #         db.session.rollback()
+    #         return {"message": f"Error deleting service: {str(e)}"}, 400
     @auth_required("token")
     @roles_required("admin")
     def delete(self, service_id):
@@ -256,24 +283,28 @@ class ServiceAPI(Resource):
             return {"message": f"Service with ID {service_id} not found"}, 404
 
         try:
-            # Get all professionals linked to this service
+            # 1️⃣ Delete related service requests first (cascade delete)
+            ServiceRequest.query.filter_by(service_id=service_id).delete()
+
+            # 2️⃣ Get all professionals linked to this service
             professionals = ServiceProfessional.query.filter_by(service_id=service_id).all()
 
-            # Delete associated professionals and their users
             for professional in professionals:
                 user = User.query.get(professional.user_id)  # Fetch associated user
-                db.session.delete(professional)
+                db.session.delete(professional)  # Delete professional
                 if user:
                     db.session.delete(user)  # Delete user if exists
 
-            # Delete the actual service
+            # 3️⃣ Delete the actual service
             db.session.delete(service)
             db.session.commit()
             
-            return {"message": "Service, associated professionals, and users deleted successfully!"}, 200
+            return {"message": "Service, professionals, related users, and service requests deleted successfully!"}, 200
+
         except Exception as e:
             db.session.rollback()
             return {"message": f"Error deleting service: {str(e)}"}, 400
+
 
 
 # ========================= Professional API =========================

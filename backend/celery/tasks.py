@@ -76,7 +76,7 @@ def send_daily_reminders():
     for professional in professionals:
         requested_today = ServiceRequest.query.filter_by(professional_id=professional.id, service_status="requested") \
                             .filter(ServiceRequest.date_of_request >= today).count()
-        accepted_today = ServiceRequest.query.filter_by(professional_id=professional.id, service_status="accepted") \
+        accepted_today = ServiceRequest.query.filter_by(professional_id=professional.id, service_status="approved") \
                             .filter(ServiceRequest.date_of_request >= today).count()
         rejected_today = ServiceRequest.query.filter_by(professional_id=professional.id, service_status="rejected") \
                             .filter(ServiceRequest.date_of_request >= today).count()

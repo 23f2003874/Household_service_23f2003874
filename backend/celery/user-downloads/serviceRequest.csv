@@ -1,9 +1,9 @@
 id,service_id,customer_id,professional_id,date_of_request,date_of_completion,service_status,remarks,rating
-1,1,1,1,2025-03-19,2025-03-20,closed,4,4.0
-2,1,1,1,2025-03-19,2025-03-20,closed,best,4.0
+1,1,1,1,2025-03-19,2025-03-22,closed,Good Service,5.0
+2,1,1,1,2025-03-19,2025-03-22,closed,Excellent,5.0
 3,1,1,1,2025-03-20,,rejected,,
 4,1,1,1,2025-03-20,,approved,,
-5,1,1,1,2025-03-20,2025-03-20,approved,good,4.0
+5,1,1,1,2025-03-20,2025-03-22,closed,Good,4.0
 6,1,1,1,2025-03-20,,rejected,,
-7,1,1,2,2025-03-20,,approved,,
-8,1,1,1,2025-03-22,,requested,,
+8,1,1,1,2025-03-22,,approved,,
+9,1,1,1,2025-03-22,,rejected,,

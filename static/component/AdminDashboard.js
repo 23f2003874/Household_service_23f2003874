@@ -2,46 +2,65 @@ export default {
   template: `
   <div>
       <!-- Navigation Bar -->
-      <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-          <div class="container-fluid">
-              <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                  <span class="navbar-toggler-icon"></span>
-              </button>
-              <div class="collapse navbar-collapse" id="navbarNav">
-                  <ul class="navbar-nav">
-                  <router-link to="/admin" class="btn btn-primary btn-lg shadow fw-bold">
-                  Home
-              </router-link>
-              <li class="nav-item">
-              <router-link to="/summary" class="btn btn-primary btn-lg shadow fw-bold">
-                  Summary
-              </router-link>
-          </li>
-        <li class="nav-item">
-                      <li class="nav-item">
-                      <input 
-                          v-model="searchQuery"
-                          class="form-control me-2"
-                          type="search"
-                          placeholder="Search services..."
-                          aria-label="Search"
-                      />
-                  </li>
-            </li>
-                      <router-link to="/" class="btn btn-warning btn-lg shadow fw-bold">
-                    Logout
-                </router-link>
-                    
-                  </ul>
-                  
-                  <span class="navbar-text">
-                      Welcome, {{ adminData.username || 'Admin' }}!
-                  </span>
-              </div>
-              <button @click="create_csv">Export CSV</button>
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow">
+    <div class="container-fluid">
+        <!-- Brand & Toggler Button -->
+        <router-link to="/admin" class="navbar-brand fw-bold text-light">
+            🏠 Admin Panel
+        </router-link>
 
-          </div>
-      </nav>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!-- Navbar Content -->
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto align-items-center">
+                <li class="nav-item">
+                    <router-link to="/admin" class="btn btn-primary btn-lg shadow fw-bold mx-2">
+                        Home
+                    </router-link>
+                </li>
+                <li class="nav-item">
+                    <router-link to="/summary" class="btn btn-primary btn-lg shadow fw-bold mx-2">
+                        Summary
+                    </router-link>
+                </li>
+            </ul>
+
+            <!-- Centered Search Bar -->
+            <form class="d-flex mx-auto w-50">
+                <input 
+                    v-model="searchQuery"
+                    class="form-control me-2"
+                    type="search"
+                    placeholder="🔍 Search services..."
+                    aria-label="Search"
+                />
+            </form>
+
+            <!-- Profile, Export & Logout Buttons -->
+            <ul class="navbar-nav ms-auto align-items-center">
+                <li class="nav-item">
+                    <span class="badge bg-success fs-6 px-3 py-2">
+                        👤 {{ adminData.username || 'Admin' }}
+                    </span>
+                </li>
+                <li class="nav-item ms-3">
+                    <button @click="create_csv" class="btn btn-info btn-lg shadow fw-bold">
+                        📥 Export CSV
+                    </button>
+                </li>
+                <li class="nav-item ms-3">
+                    <button @click="logout" class="btn btn-warning btn-lg shadow fw-bold">
+                        🚪 Logout
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
 
       <div class="container mt-4">
       
@@ -244,6 +263,14 @@ export default {
       this.loadServicesRequest()
   },
 
+  watch: {
+    showServiceForm(newVal) {
+        if (newVal) {
+            this.newService = { name: '', base_price: '', time_required: '', description: '' };
+        }
+    }
+},
+
   methods: {
       loadAdminData() {
           fetch("/api/admin", {
@@ -265,6 +292,10 @@ export default {
           .catch(error => console.error("Error fetching admin data:", error));
       },
 
+      logout() {
+        localStorage.removeItem("auth_token");  // Remove auth token
+        window.location.href = "/";  // Redirect to homepage
+    },
     async create_csv() {
         // Step 1: Send request to create CSV
         const res = await fetch(location.origin + '/create-csv', {
@@ -391,20 +422,40 @@ updateCustomerStatus(customer) {
     },
     
 
-      createService() {
-          fetch("http://127.0.0.1:5000/api/services", {
-              method: "POST",
-              headers: { "Content-Type": "application/json", "Authentication-Token": localStorage.getItem("auth_token") },
-              body: JSON.stringify(this.newService)
-          })
-          .then(response => response.json())
-          .then(data => {
-              console.log("Service created:", data);
-              this.loadServices();
-              this.showServiceForm = false;
-          })
-          .catch(error => console.error("Error creating service:", error));
-      },
+    //   createService() {
+    //       fetch("http://127.0.0.1:5000/api/services", {
+    //           method: "POST",
+    //           headers: { "Content-Type": "application/json", "Authentication-Token": localStorage.getItem("auth_token") },
+    //           body: JSON.stringify(this.newService)
+    //       })
+    //       .then(response => response.json())
+    //       .then(data => {
+    //           console.log("Service created:", data);
+    //           this.loadServices();
+    //           this.showServiceForm = false;
+    //       })
+    //       .catch(error => console.error("Error creating service:", error));
+    //   },
+    createService() {
+        fetch("http://127.0.0.1:5000/api/services", {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json", 
+                "Authentication-Token": localStorage.getItem("auth_token") 
+            },
+            body: JSON.stringify(this.newService)
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log("Service created:", data);
+            this.loadServices();  // Refresh the services list
+            this.showServiceForm = false;  // Close modal
+            
+            // ✅ Reset the form fields to blank
+            this.newService = { name: '', base_price: '', time_required: '', description: '' };
+        })
+        .catch(error => console.error("Error creating service:", error));
+    },
       editService(service) {
         this.editServiceData = { ...service };
         this.showEditForm = true;
@@ -424,39 +475,52 @@ updateCustomerStatus(customer) {
         .catch(error => console.error("Error updating service:", error));
     },
 
+    // deleteService(serviceId) {
+    //     if (!confirm("Are you sure you want to delete this service?")) return;
+        
+    //     fetch(`/api/services/${serviceId}`, {
+    //         method: "DELETE",
+    //         headers: { "Content-Type": "application/json", "Authentication-Token": localStorage.getItem("auth_token") }
+    //     })
+    //     .then(() => {
+    //         this.loadServices();
+    //     })
+    //     .catch(error => console.error("Error deleting service:", error));
+    // },
     deleteService(serviceId) {
         if (!confirm("Are you sure you want to delete this service?")) return;
         
         fetch(`/api/services/${serviceId}`, {
             method: "DELETE",
-            headers: { "Content-Type": "application/json", "Authentication-Token": localStorage.getItem("auth_token") }
+            headers: { 
+                "Content-Type": "application/json", 
+                "Authentication-Token": localStorage.getItem("auth_token") 
+            }
         })
-        .then(() => {
-            this.loadServices();
+        .then(response => response.json())
+        .then(data => {
+            if (data.message.includes("successfully")) {  // ✅ Ensure successful deletion
+                alert("✅ Service deleted successfully!");
+    
+                // ✅ Remove the deleted service from the UI
+                this.services = this.services.filter(service => service.id !== serviceId);
+    
+                // ✅ Remove related professionals (if stored separately)
+                this.professionals = this.professionals.filter(pro => pro.service_id !== serviceId);
+    
+                // ✅ Remove related service requests (if stored separately)
+                this.serviceRequests = this.serviceRequests.filter(req => req.service_id !== serviceId);
+            } else {
+                alert("❌ Error: " + data.message);
+            }
         })
         .catch(error => console.error("Error deleting service:", error));
-    },
+    }
+,    
      // Delete a customer
      deleteCustomer(id) {
-                if (confirm("Are you sure you want to delete this customer?")) {
-                    fetch(`/api/customers/${id}`, {
-                        method: "DELETE",
-                        headers: {
-                            "Authentication-Token": localStorage.getItem("auth_token")
-                        }
-                    })
-                    .then(response => response.json())
-                    .then(() => {
-                        console.log("Customer deleted");
-                        this.loadCustomers();
-                    })
-                    .catch(error => console.error("Error deleting customer:", error));
-                }
-            },
-         // Delete a professional
-    deleteProfessional(id) {
-        if (confirm("Are you sure you want to delete this professional?")) {
-            fetch(`/api/professionals/${id}`, {
+        if (confirm("Are you sure you want to delete this customer?")) {
+            fetch(`/api/customers/${id}`, {
                 method: "DELETE",
                 headers: {
                     "Authentication-Token": localStorage.getItem("auth_token")
@@ -464,15 +528,68 @@ updateCustomerStatus(customer) {
             })
             .then(response => response.json())
             .then(() => {
-                console.log("Professional deleted");
-                this.loadProfessionals();
+                console.log("Customer deleted");
+                this.customers = this.customers.filter(customer => customer.id !== id);  // ✅ Remove customer from UI
+                this.serviceRequests = this.serviceRequests.filter(req => req.customer_id !== id);  // ✅ Remove related service requests
             })
-            .catch(error => console.error("Error deleting professional:", error));
+            .catch(error => console.error("Error deleting customer:", error));
         }
-    },
-    
-  } 
-, goToSummary() {
+    }
+,    
+    //  deleteCustomer(id) {
+    //             if (confirm("Are you sure you want to delete this customer?")) {
+    //                 fetch(`/api/customers/${id}`, {
+    //                     method: "DELETE",
+    //                     headers: {
+    //                         "Authentication-Token": localStorage.getItem("auth_token")
+    //                     }
+    //                 })
+    //                 .then(response => response.json())
+    //                 .then(() => {
+    //                     console.log("Customer deleted");
+    //                     this.loadCustomers();
+    //                 })
+    //                 .catch(error => console.error("Error deleting customer:", error));
+    //             }
+    //         },
+         // Delete a professional
+//     deleteProfessional(id) {
+//         if (confirm("Are you sure you want to delete this professional?")) {
+//             fetch(`/api/professionals/${id}`, {
+//                 method: "DELETE",
+//                 headers: {
+//                     "Authentication-Token": localStorage.getItem("auth_token")
+//                 }
+//             })
+//             .then(response => response.json())
+//             .then(() => {
+//                 console.log("Professional deleted");
+//                 this.loadProfessionals();
+//             })
+//             .catch(error => console.error("Error deleting professional:", error));
+//         }
+//     },
+//  },
+deleteProfessional(id) {
+    if (confirm("Are you sure you want to delete this professional?")) {
+        fetch(`/api/professionals/${id}`, {
+            method: "DELETE",
+            headers: {
+                "Authentication-Token": localStorage.getItem("auth_token")
+            }
+        })
+        .then(response => response.json())
+        .then(() => {
+            console.log("Professional deleted");
+            this.professionals = this.professionals.filter(pro => pro.id !== id);  // ✅ Remove professional from UI
+            this.serviceRequests = this.serviceRequests.filter(req => req.professional_id !== id);  // ✅ Remove related service requests
+        })
+        .catch(error => console.error("Error deleting professional:", error));
+    }}
+}
+,
+ 
+ goToSummary() {
     this.$router.push("/api/admin/summary");
   },
 computed: {

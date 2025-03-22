@@ -2,32 +2,54 @@ export default {
     template: `
     <div>
         <!-- Navbar -->
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-            <div class="container-fluid">
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav">
-                        <router-link to="/customer/dashboard" class="btn btn-primary btn-lg shadow fw-bold">Home</router-link>
-                        <li class="nav-item">
-                            <input 
-                                v-model="searchQuery"
-                                class="form-control me-2"
-                                type="search"
-                                placeholder="Search services..."
-                                aria-label="Search"
-                            />
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="#" @click.prevent="logout">Logout</a>
-                        </li>
-                    </ul>
-                    <span class="navbar-text ms-auto">Welcome, {{ userData.username }}</span>
-                </div>
-            </div>
-        </nav>
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow">
+    <div class="container-fluid">
+        <!-- Brand & Toggler Button -->
+        <router-link to="/customer/dashboard" class="navbar-brand fw-bold text-light">
+            🏠 Home Services
+        </router-link>
 
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <!-- Navbar Content -->
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto align-items-center">
+                <li class="nav-item">
+                    <router-link to="/customer/dashboard" class="btn btn-primary btn-sm shadow fw-bold">
+                        Home
+                    </router-link>
+                </li>
+            </ul>
+
+            <!-- Centered Search Bar -->
+            <form class="d-flex mx-auto w-50">
+                <input 
+                    v-model="searchQuery"
+                    class="form-control me-2"
+                    type="search"
+                    placeholder="🔍 Search services..."
+                    aria-label="Search"
+                />
+            </form>
+
+            <!-- Profile & Logout -->
+            <ul class="navbar-nav ms-auto align-items-center">
+                <li class="nav-item">
+                    <span class="badge bg-success fs-6 px-3 py-2">👤 {{ userData.username }}</span>
+                </li>
+                <li class="nav-item ms-3">
+                    <button class="btn btn-danger btn-sm px-3 py-2 shadow fw-bold" @click="logout">
+                        🚪 Logout
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+    
         <!-- Available Services -->
         <div class="container mt-4">
             <h2>Available Services</h2>
@@ -90,6 +112,8 @@ export default {
                             </td>
                             <td>{{ history.date_of_completion }}</td>
                             <td>{{ history.status }}</td>
+                            
+
                             <td>
                             
                             <button class="btn btn-warning btn-sm" @click="openReviewModal(history)">Close</button>
@@ -339,22 +363,25 @@ async submitReview() {
     } catch (error) {
         console.error("❌ Error submitting review:", error);
     }
-}
-
-,
+},
         editService(service) {
-            console.log("✏️ Editing service:", service); // Debugging Log
-    
-            // ✅ Ensure editDateData gets correct values
+            if (service.status !== "requested") {
+                alert("❌ You cannot edit the date for this request because it is already processed.");
+                return;
+            }
+        
+            console.log("✏️ Editing service:", service);
+        
             this.editDateData = { 
-                customer_id: service.customer_id || this.userData.customer_id,  // ✅ Use correct customer_id
-                service_id: service.id || null, 
+                customer_id: service.customer_id || this.userData.customer_id,
+                service_id: service.id || null,
                 date_of_request: service.date_of_request || null 
             };
-    
-            this.showEditForm = true;  // Show the modal
-            console.log("🛠️ Modal Opened:", this.showEditForm, "Data:", this.editDateData);  // Debug log
-        },
+        
+            this.showEditForm = true;  
+            console.log("🛠️ Modal Opened:", this.showEditForm, "Data:", this.editDateData);
+        }
+,        
     
         updateService() {
             console.log("📅 Updating Date:", this.editDateData);
@@ -421,10 +448,11 @@ async submitReview() {
                 .catch(error => console.error("Error deleting service request:", error));
             },
 
-
-        logout() {
-            localStorage.removeItem("auth_token");
-            window.location.href = "/login";
-        }
+            logout() {
+                localStorage.removeItem("auth_token");  // Clear authentication token
+                window.location.href = "/";  // Redirect to login page
+            
+            },
+        
     }
 };

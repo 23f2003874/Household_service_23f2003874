@@ -2,39 +2,53 @@ export default {
     template: `
     
     <div>
-        <!-- Navbar -->
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-            <div class="container-fluid">
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarNav">
-                    <ul class="navbar-nav">
-                        <router-link to="/professional/dashboard" class="btn btn-primary btn-lg shadow fw-bold">Home</router-link>
-                        <li class="nav-item">
-                        <router-link to="/profSummary" class="btn btn-primary btn-lg shadow fw-bold">
-                  Summary
-              </router-link>
-                        </li>
-                        <li class="nav-item">
-                            <input 
-                                v-model="searchQuery"
-                                class="form-control me-2"
-                                type="search"
-                                placeholder="Search services..."
-                                aria-label="Search"
-                            />
-                        </li>
-                        <router-link to="/" class="btn btn-warning btn-lg shadow fw-bold">
-                    Logout
-                </router-link>
-                       
-                    </ul>
-                    <span class="navbar-text ms-auto">Welcome, {{ userData.username }}</span>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow">
+        <div class="container-fluid">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
 
-                </div>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto align-items-center">
+                    <li class="nav-item">
+                        <router-link to="/professional/dashboard" class="btn btn-primary btn-sm shadow fw-bold px-3 py-2">
+                            🏠 Home
+                        </router-link>
+                    </li>
+                    <li class="nav-item ms-2">
+                        <router-link to="/profSummary" class="btn btn-primary btn-sm shadow fw-bold px-3 py-2">
+                            📊 Summary
+                        </router-link>
+                    </li>
+                </ul>
+
+                <!-- Centered Search Bar -->
+                <form class="d-flex mx-auto w-50">
+                    <input 
+                        v-model="searchQuery"
+                        class="form-control me-2"
+                        type="search"
+                        placeholder="🔍 Search services..."
+                        aria-label="Search"
+                    />
+                </form>
+
+                <!-- Profile & Logout -->
+                <ul class="navbar-nav ms-auto align-items-center">
+                    <li class="nav-item">
+                        <span class="badge bg-success fs-6 px-3 py-2">👤 {{ userData.username }}</span>
+                    </li>
+                    <li class="nav-item ms-3">
+                    <button class="btn btn-danger btn-sm px-3 py-2 shadow fw-bold" @click="logout">
+                        🚪 Logout
+                    </button>
+                </li>
+                </ul>
             </div>
-        </nav>
+        </div>
+    </nav>
+
 
         
         <!-- New Service Requests -->
@@ -293,10 +307,11 @@ async fetchProfessionalServiceRequests() {
         console.error("Error fetching professional service requests:", error);
     }
 },
-       
-        logout() {
-            // Logout logic here
-        },
+    logout() {
+        localStorage.removeItem("auth_token");  // Clear authentication token
+        window.location.href = "/";  // Redirect to login page
+
+    },
         goSummary() {
             // Navigate to summary page
         }
