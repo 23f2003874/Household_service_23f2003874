@@ -142,22 +142,7 @@ class CustomerAPI(Resource):
         except Exception as e:
             db.session.rollback()
             return {"message": f"Error deleting customer: {str(e)}"}, 400
-    # def delete(self, customer_id):
-    #     customer_id = int(customer_id)  # Ensure id is correctly passed
-    #     customer = Customer.query.get(customer_id)
-        
-    #     if not customer:
-    #         return {"message": f"Customer with ID {customer_id} not found"}, 404
-        
-    #     try:
-    #         for service_request in customer.service_requests:
-    #             db.session.delete(service_request)
-    #         db.session.delete(customer)
-    #         db.session.commit()
-    #         return {"message": "Customer deleted successfully!"}, 200
-    #     except Exception as e:
-    #         db.session.rollback()
-    #         return {"message": f"Error deleting customer: {str(e)}"}, 400
+
 
     @auth_required("token")
     @roles_required("admin")
@@ -179,35 +164,6 @@ class CustomerAPI(Resource):
         except Exception as e:
             db.session.rollback()
             return {"message": f"Error updating customer status: {str(e)}"}, 400
-        
-
-    # @auth_required("token")
-    # @roles_required("admin")
-    # def patch(self, customer_id):
-    #     """Toggle block/unblock customer (active/inactive status)"""
-    #     customer = Customer.query.get(customer_id)
-    #     if not customer:
-    #         return {"message": f"Customer with ID {customer_id} not found"}, 404
-
-    #     try:
-    #         # Toggle block/unblock
-    #         if customer.status == "active":
-    #             customer.status = "inactive"
-    #             customer.is_blocked = True
-    #         else:
-    #             customer.status = "active"
-    #             customer.is_blocked = False
-
-    #         db.session.commit()
-    #         return {
-    #             "message": f"Customer {'blocked' if customer.is_blocked else 'unblocked'} successfully!",
-    #             "status": customer.status,
-    #             "is_blocked": customer.is_blocked
-    #         }, 200
-    #     except Exception as e:
-    #         db.session.rollback()
-    #         return {"message": f"Error updating customer status: {str(e)}"}, 400
-
 
 
 # ========================= Service API =========================
@@ -319,54 +275,8 @@ class ServiceAPI(Resource):
             db.session.rollback()
             return {"message": f"Error deleting service: {str(e)}"}, 400
 
-    # @auth_required("token")
-    # @roles_required("admin")
-    # def delete(self, service_id):
-    #     service = Service.query.get(service_id)
-    #     if not service:
-    #         return {"message": f"Service with ID {service_id} not found"}, 404
-        
-    #     try:
-    #         # Delete related entries in service_professionals first
-    #         ServiceProfessional.query.filter_by(service_id=service_id).delete()
-
-    #         # Now delete the actual service
-    #         db.session.delete(service)
-    #         db.session.commit()
-    #         return {"message": "Service deleted successfully!"}, 200
-    #     except Exception as e:
-    #         db.session.rollback()
-    #         return {"message": f"Error deleting service: {str(e)}"}, 400
-
-
-
-# Register API resource
-
 
 # ========================= Professional API =========================
-# class ProfessionalAPI(Resource):
-#     @auth_required("token")
-#     @roles_required("admin")
-#     def get(self):
-#         professionals = ServiceProfessional.query.all()
-#         if not professionals:
-#             return {"message": "No professionals found"}, 404
-
-#         return [{
-#             "id": p.id,
-#             "user_id": p.user.id if p.user else None,
-#             "username": p.user.username if p.user else "⚠ Not Found",
-#             "email": p.user.email if p.user else "⚠ Not Found",
-#             "phone_number": p.phone_number,
-#             "address": p.address,
-#             "pin_code": p.pin_code,
-#             "service_id": p.service_id,
-#             # "service_name": p.service.name if p.services else "Unknown",
-#             "experience": p.experience,
-#             "verified": p.verified,
-#             "status": p.status,
-#             "rating": p.rating
-#         } for p in professionals], 200
 from sqlalchemy import func
 
 class ProfessionalAPI(Resource):
@@ -469,20 +379,8 @@ class ProfessionalAPI(Resource):
         except Exception as e:
             db.session.rollback()
             return {"message": f"Error deleting professional: {str(e)}"}, 400
-    # def delete(self, id):
-    #     professional = ServiceProfessional.query.get(id)
-    #     if not professional:
-    #         return {"message": f"Professional with ID {id} not found"}, 404
-        
-    #     try:
-    #         # Delete related service requests
-    #         ServiceRequest.query.filter_by(professional_id=id).delete()
-    #         db.session.delete(professional)
-    #         db.session.commit()
-    #         return {"message": "Professional deleted successfully!"}, 200
-    #     except Exception as e:
-    #         db.session.rollback()
-    #         return {"message": f"Error deleting professional: {str(e)}"}, 400
+    
+
 
     @auth_required("token")
     @roles_required("admin")
@@ -505,156 +403,8 @@ class ProfessionalAPI(Resource):
             db.session.rollback()
             return {"message": f"Error updating professional status: {str(e)}"}, 400
 
-# class ProfessionalAPI(Resource):
-#     @auth_required("token")
-#     @roles_required("admin")
-#     def get(self):
-#         professionals = ServiceProfessional.query.all()
-#         if not professionals:
-#             return {"message": "No professionals found"}, 404
-        
-#         return [{
-#             "id": p.id,
-#             "user_id": p.user.id,
-#             "username": p.user.username,
-#             "email": p.user.email,
-#             # "phone_number": p.user.phone_number,
-#             # "address": p.user.address,
-#             # "pin_code": p.user.pin_code,
-#             "service_id": p.service_id,
-#             "service_name": p.service.name,
-#             "experience": p.experience,
-#             "verified": p.verified,
-#             "status": p.status,
-#             "rating": p.rating
-#         } for p in professionals], 200
 
-#     @auth_required("token")
-#     @roles_required("admin")
-#     def post(self):
-#         data = request.json
-#         try:
-#             if User.query.filter_by(email=data.get("email")).first():
-#                 return {"message": "Email already registered"}, 400
-
-#             # Create a new User entry
-#             user = User(
-#                 username=data.get("username"),
-#                 email=data.get("email"),
-#                 password=data.get("password"),  # Assume hashing is handled elsewhere
-#                 # phone_number=data.get("phone_number"),
-#                 # address=data.get("address"),
-#                 # pin_code=data.get("pin_code"),
-#                 active=True
-#             )
-#             db.session.add(user)
-#             db.session.commit() 
-
-#             new_professional = ServiceProfessional(
-#                 user_id=data.get("user_id"),
-#                 service_id=data.get("service_id"),
-#                 experience=data.get("experience"),
-#                 # address=data.get("address"),
-#                 # pin_code=data.get("pin_code"),
-#                 verified=data.get("verified", False),
-#                 status=data.get("status"),
-#                 rating=data.get("rating", 0.0)
-#             )
-#             db.session.add(new_professional)
-#             db.session.commit()
-#             return {"message": "Service professional created successfully!"}, 201
-#         except Exception as e:
-#             db.session.rollback()
-#             return {"message": f"Error creating professional: {str(e)}"}, 400
-
-#     @auth_required("token")
-#     @roles_required("admin")
-#     def delete(self, id):
-#         professional = ServiceProfessional.query.get(id)
-#         if not professional:
-#             return {"message": f"Professional with ID {id} not found"}, 404
-        
-#         try:
-#             for service_request in professional.service_requests:
-#                 db.session.delete(service_request)
-#             db.session.delete(professional)
-#             db.session.commit()
-#             return {"message": "Customer deleted successfully!"}, 200
-#         except Exception as e:
-#             db.session.rollback()
-#             return {"message": f"Error deleting customer: {str(e)}"}, 400
-
-#     @auth_required("token")
-#     @roles_required("admin")
-#     def put(self, id):
-#         professional = ServiceProfessional.query.get(id)
-#         if not professional:
-#             return {"message": "Professional not found"}, 404
-        
-#         data = request.get_json()
-#         status = data.get("status")
-        
-#         if status not in ['active', 'blocked', 'inactive']:
-#             return {"message": "Invalid status"}, 400
-
-#         try:
-#             professional.status = status
-#             db.session.commit()
-#             return {"message": f"Professional status updated to {status}"}, 200
-#         except Exception as e:
-#             db.session.rollback()
-#             return {"message": f"Error updating professional status: {str(e)}"}, 400
-
-    # @auth_required("token")
-    # @roles_required("admin")
-    # def patch(self, professional_id):
-    #     """Toggle block/unblock customer (active/inactive status)"""
-    #     professional = ServiceProfessional.query.get(professional_id)
-    #     if not professional:
-    #         return {"message": f"Customer with ID {professional_id} not found"}, 404
-
-    #     try:
-    #         # Toggle block/unblock
-    #         if professional.status == "active":
-    #             professional.status = "inactive"
-    #             professional.is_blocked = True
-    #         else:
-    #             professional.status = "active"
-    #             professional.is_blocked = False
-
-    #         db.session.commit()
-    #         return {
-    #             "message": f"Customer {'blocked' if professional.is_blocked else 'unblocked'} successfully!",
-    #             "status": professional.status,
-    #             "is_blocked": professional.is_blocked
-    #         }, 200
-    #     except Exception as e:
-    #         db.session.rollback()
-    #         return {"message": f"Error updating customer status: {str(e)}"}, 400
-
-
-# class ServiceRequestAPI(Resource):
-#     @auth_required("token")
-#     @roles_required("admin")
-#     def get(self):
-        
-#         requests = ServiceRequest.query.all()
-#         if not requests:
-#             return {"message": "No services found"}, 404
-#         for r in requests:
-#             print(f"Request ID: {r.id}, Customer ID: {r.customer_id}, Customer Object: {r.customer}")
-
-#         return [{
-#             "id": r.id,
-#             "service_name": r.service.name if r.service else "Unknown",
-#             "customer_name": r.customer.user.username if r.customer and r.customer.user else "⚠ Not Found",
-#             "professional_name": r.professional.username if r.professional and r.professional.user else "Not Assigned",
-#             "date_of_request": r.date_of_request.strftime("%Y-%m-%d") if r.date_of_request else "Unknown",
-#             "date_of_completion": r.date_of_completion.strftime("%Y-%m-%d") if r.date_of_completion else "Pending",
-#             "service_status": r.service_status,
-#             "remarks": r.remarks or "No remarks",
-#             "rating": r.rating if r.rating else "Not rated"
-#         } for r in requests], 200
+#---------------------- ServiceRequest API---------------------------------------------
 
 class ServiceRequestAPI(Resource):
     @auth_required("token")
@@ -688,8 +438,6 @@ class ServiceRequestAPI(Resource):
 # ========================= Register API Resources =========================
 
 api.add_resource(CustomerAPI, "/api/customers", "/api/customers/<int:customer_id>","/api/customers/<int:id>/status")
-
-# api.add_resource(ServiceAPI, "/api/services")
 api.add_resource(ServiceAPI, "/api/services", "/api/services/<int:service_id>")
 api.add_resource(ProfessionalAPI, "/api/professionals","/api/professionals/<int:id>", "/api/professionals/<int:id>/status")
 

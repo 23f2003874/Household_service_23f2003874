@@ -1,10 +1,12 @@
 from celery import shared_task
 import time
-from backend.model import ServiceRequest ,User,Service,Customer
+from backend.model import ServiceRequest ,User,Service,Customer,ServiceProfessional
 import flask_excel
 from flask import render_template
 from .mail import send_email
 from backend.utils import format_report
+from celery import shared_task
+from datetime import datetime
 
 @shared_task(ignore_result = False)
 def add(x,y):
@@ -60,3 +62,48 @@ def monthly_report():
         )
 
     return "Monthly reports sent to all customers."
+
+
+
+
+@shared_task(ignore_result=True, name="daily_report")
+def send_daily_reminders():
+    """Fetch daily service request summary for professionals and send email reminders."""
+    today = datetime.utcnow().date()
+    
+    professionals = ServiceProfessional.query.all()
+    
+    for professional in professionals:
+        requested_today = ServiceRequest.query.filter_by(professional_id=professional.id, service_status="requested") \
+                            .filter(ServiceRequest.date_of_request >= today).count()
+        accepted_today = ServiceRequest.query.filter_by(professional_id=professional.id, service_status="accepted") \
+                            .filter(ServiceRequest.date_of_request >= today).count()
+        rejected_today = ServiceRequest.query.filter_by(professional_id=professional.id, service_status="rejected") \
+                            .filter(ServiceRequest.date_of_request >= today).count()
+        closed_today = ServiceRequest.query.filter_by(professional_id=professional.id, service_status="closed") \
+                            .filter(ServiceRequest.date_of_request >= today).count()
+
+        if requested_today or accepted_today or rejected_today or closed_today:
+            # Email content
+            subject = f"Daily Service Summary - {professional.username}"
+            body = f"""
+            <html>
+            <body>
+                <h3>Hello {professional.username},</h3>
+                <p>Here is your daily service request summary:</p>
+                <ul>
+                    <li><b>Requested Today:</b> {requested_today}</li>
+                    <li><b>Accepted Today:</b> {accepted_today}</li>
+                    <li><b>Rejected Today:</b> {rejected_today}</li>
+                    <li><b>Closed Today:</b> {closed_today}</li>
+                </ul>
+                <p>Please review and take necessary action.</p>
+                <p>Regards,<br>Household Services Team</p>
+            </body>
+            </html>
+            """
+
+            # Send Email using mail.py
+            send_email(to_address=professional.email, subject=subject, message=body, content="html")
+
+    return "Daily reminders sent successfully!"

@@ -39,8 +39,4 @@ const app = new Vue ({
     data: {
         section : "frontend"
     },
-    // components : {
-    //     "nav-bar": Navbar,
-    //     "foot": Footer
-    // }
 })

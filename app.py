@@ -8,7 +8,7 @@ from flask_caching import Cache
 from backend.celery.celery_factory import celery_init_app 
 import flask_excel as excel 
 from celery.schedules import crontab
-from backend.celery.tasks import monthly_report
+from backend.celery.tasks import monthly_report,send_daily_reminders
 
 def create_app():
     app = Flask(__name__)
@@ -66,10 +66,29 @@ from backend.routes import *
 #     )
 @celery_app.on_after_finalize.connect
 def setup_periodic_tasks(sender, **kwargs):
+    # Runs every 1 minute (Daily Reminder)
     sender.add_periodic_task(
-        crontab(minute = '*/2'),    #crontab(minute=0, hour=0, day_of_month=1),  # Runs on the 1st of every month at midnight
+        crontab(minute="*/1"),
+        send_daily_reminders.s(),
+    )
+
+    # Runs every 2 minutes (Test Purpose) or 1st of every month at midnight (Monthly Report)
+    sender.add_periodic_task(
+        crontab(minute="*/2"),  # Change to crontab(minute=0, hour=0, day_of_month=1) for monthly execution
         monthly_report.s(),
     )
+
+# @celery_app.on_after_finalize.connect
+# def setup_periodic_tasks(sender, **kwargs):
+#      sender.add_periodic_task(
+#         crontab(minute="*/1"),  # Runs every 1 minute
+#         send_daily_reminders.s(),
+#     )
+     
+#     sender.add_periodic_task(
+#         crontab(minute = '*/2'),    #crontab(minute=0, hour=0, day_of_month=1),  # Runs on the 1st of every month at midnight
+#         monthly_report.s(),
+#     )
 
 
 excel.init_excel(app)
